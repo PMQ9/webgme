@@ -55,8 +55,9 @@ chmod +x setup/start-local.sh  # First time only
 
 The script will:
 1. Check if MongoDB container `webgme-mongo` exists
-2. Create or start the MongoDB container
+2. Create or start the MongoDB container with persistent storage
 3. Start the WebGME server on port 8888
+4. **Auto-backup when you stop the server (Ctrl+C)**
 
 ### Accessing WebGME
 
@@ -70,7 +71,7 @@ Open your browser and navigate to:
 Both scripts handle MongoDB setup automatically:
 
 1. **Check if container exists**: Looks for a container named `webgme-mongo`
-2. **Create if missing**: Runs `docker run --name webgme-mongo -d -p 27017:27017 mongo:4.4`
+2. **Create if missing**: Runs `docker run --name webgme-mongo -d -p 27017:27017 -v webgme-data:/data/db mongo:4.4`
 3. **Start if stopped**: Runs `docker start webgme-mongo`
 4. **Skip if running**: Continues to server startup
 
@@ -82,6 +83,15 @@ npm start
 ```
 
 This starts the WebGME server with the default configuration.
+
+### Automatic Backup on Exit
+
+When you stop the server (Ctrl+C), the scripts automatically:
+1. Create a timestamped backup in `mongodb-backup/backup_YYYYMMDD_HHMMSS/`
+2. Keep only the last 5 backups (older ones are auto-deleted)
+3. Display backup location and status
+
+**Note:** Backups are automatically excluded from git (already in `.gitignore`).
 
 ## Manual Setup
 

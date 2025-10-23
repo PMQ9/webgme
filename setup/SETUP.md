@@ -46,25 +46,39 @@ chmod +x start-local.sh
 
 The automated script will:
 1. Check if MongoDB container is running
-2. Start/create MongoDB container if needed
+2. Start/create MongoDB container with persistent storage if needed
 3. Start the WebGME server
 
 Access WebGME at: **http://127.0.0.1:8888**
+
+**Important:** The scripts automatically configure MongoDB with persistent storage using a Docker volume named `webgme-data`. This ensures your projects survive container restarts and machine reboots.
 
 ## Manual Setup (Step-by-Step)
 
 ### Step 1: Start MongoDB
 
 #### Option A: Using Docker (Recommended)
+
+**With Persistent Storage (Recommended):**
 ```bash
-# Start MongoDB container
-docker run --name webgme-mongo -d -p 27017:27017 mongo:4.4
+# Start MongoDB container with persistent data volume
+docker run --name webgme-mongo -d -p 27017:27017 -v webgme-data:/data/db mongo:4.4
 
 # Verify it's running
 docker ps
 ```
 
-To stop MongoDB later:
+This creates a Docker volume named `webgme-data` that persists your database even when the container is removed.
+
+**Without Persistent Storage (Not Recommended):**
+```bash
+# Start MongoDB container (data will be lost if container is removed)
+docker run --name webgme-mongo -d -p 27017:27017 mongo:4.4
+```
+
+**Managing the Container:**
+
+To stop MongoDB:
 ```bash
 docker stop webgme-mongo
 ```
@@ -74,10 +88,15 @@ To start it again:
 docker start webgme-mongo
 ```
 
-To remove the container:
+To remove the container (data persists in volume if you used `-v`):
 ```bash
 docker stop webgme-mongo
 docker rm webgme-mongo
+```
+
+To also remove the data volume (WARNING: This deletes all your projects):
+```bash
+docker volume rm webgme-data
 ```
 
 #### Option B: Using Local MongoDB Installation
@@ -331,6 +350,113 @@ Specific debug filters:
 3. **Open browser**: http://127.0.0.1:8888
 
 4. **Stop server**: `Ctrl+C` when done
+
+## Data Persistence and Backup
+
+### Understanding Data Storage
+
+WebGME stores all project data in MongoDB. There are two ways to ensure your data persists:
+
+#### Docker Volume (Recommended)
+
+When using Docker with the `-v webgme-data:/data/db` flag, data is stored in a Docker volume:
+
+**Advantages:**
+- Data persists across container stops/starts
+- Data survives container removal
+- Data survives machine restarts
+- Automatic with our startup scripts
+
+**View your data volume:**
+```bash
+docker volume ls | grep webgme-data
+```
+
+**Inspect volume details:**
+```bash
+docker volume inspect webgme-data
+```
+
+**Back up the volume:**
+```bash
+# Create a backup
+docker run --rm -v webgme-data:/data -v ${PWD}:/backup mongo:4.4 tar czf /backup/webgme-backup.tar.gz /data/db
+
+# On Windows use:
+docker run --rm -v webgme-data:/data -v %cd%:/backup mongo:4.4 tar czf /backup/webgme-backup.tar.gz /data/db
+```
+
+**Restore from backup:**
+```bash
+# Stop MongoDB first
+docker stop webgme-mongo
+
+# Restore the data
+docker run --rm -v webgme-data:/data -v ${PWD}:/backup mongo:4.4 tar xzf /backup/webgme-backup.tar.gz -C /
+
+# Start MongoDB again
+docker start webgme-mongo
+```
+
+#### Local MongoDB Installation
+
+If using a local MongoDB installation, data is stored in MongoDB's data directory (typically `/var/lib/mongodb` on Linux or `C:\data\db` on Windows). Follow MongoDB's standard backup procedures.
+
+### Why Projects Might Disappear
+
+Your projects can disappear in these scenarios:
+
+1. **Container without volume:** If you created the MongoDB container without the `-v` flag, data is stored inside the container and lost when:
+   - The container is removed (`docker rm webgme-mongo`)
+   - Docker is reset or uninstalled
+
+2. **Volume deleted:** If you explicitly delete the volume:
+   ```bash
+   docker volume rm webgme-data
+   ```
+
+3. **Wrong database:** If your config points to a different database name than where your data was stored
+
+### Starting Fresh with Persistent Storage
+
+If you need to start fresh (you've already removed the old container):
+
+1. **Just run the start script** - it will automatically create a new container with persistent storage:
+   ```bash
+   # Windows
+   setup\start-local.bat
+
+   # Linux/macOS
+   ./setup/start-local.sh
+   ```
+
+The script automatically detects the missing container and creates it with the named volume `webgme-data` for persistent storage.
+
+### Checking Your Current Setup
+
+To check if your MongoDB container has persistent storage:
+
+```bash
+docker inspect webgme-mongo | grep -A 5 Mounts
+```
+
+Look for a volume mount at `/data/db`. If you see `"Type": "volume"`, you have persistent storage.
+
+### Syncing with Web-Based WebGME
+
+The web-based WebGME at https://webgme.org is a completely separate instance with its own database. Projects are not automatically synced between your local instance and the web version.
+
+**To transfer projects:**
+
+1. **Export from one instance:**
+   - Open the project in WebGME
+   - Use the export functionality (File → Export)
+   - Save the exported file
+
+2. **Import to other instance:**
+   - Open the target WebGME instance
+   - Use import functionality (File → Import)
+   - Select your exported file
 
 ## Additional Resources
 

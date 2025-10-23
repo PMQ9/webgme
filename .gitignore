@@ -49,3 +49,4 @@ workerList.nedb
 typed_docs/
 
 # package-lock.json
+mongodb-backup/*
