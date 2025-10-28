@@ -32,5 +32,8 @@ config.visualization.visualizerDescriptors = [path.join(__dirname, '../src/clien
 config.visualization.panelPaths = [path.join(__dirname, '../src/client/js/Panels')];
 config.visualization.layout.basePaths = [path.join(__dirname, '../src/client/js/Layouts')];
 
+// Plugin paths for MoE metamodel
+config.plugin.basePaths = [path.join(__dirname, '../src/plugins')];
+
 // config.storage.keyType = 'rustSHA1'; //check it out
 module.exports = config;

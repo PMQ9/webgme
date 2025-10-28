@@ -1,0 +1,15 @@
+{
+  "id": "MoE_Metamodel_ver1",
+  "name": "MoE Metamodel Generator v1",
+  "version": "1.0.0",
+  "description": "Creates a complete metamodel for Mixture-of-Experts (MoE) architectures. Includes expert models (ultra_verifiable_cnn, micro_cnn, tiny_cnn, small_cnn), routers, datasets (GTSRB, CIFAR10, MNIST), and training configurations.",
+  "icon": {
+    "class": "glyphicon glyphicon-cog",
+    "src": ""
+  },
+  "disableServerExecution": false,
+  "disableClientExecution": false,
+  "writeAccessRequired": true,
+  "configStructure": [],
+  "dependencies": []
+}
