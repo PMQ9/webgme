@@ -10,49 +10,38 @@ echo.
 REM Check if MongoDB container is running
 echo [1/2] Checking MongoDB...
 
-REM Use docker inspect to check if container exists (more reliable than findstr)
-docker inspect webgme-mongo > nul 2>&1
-
+REM Check if container is already running
+docker ps | find "webgme-mongo" >nul
 if %ERRORLEVEL% EQU 0 (
-    REM Container exists, check if it's running
-    docker ps --filter "name=webgme-mongo" > nul 2>&1
-
-    if %ERRORLEVEL% EQU 0 (
-        echo MongoDB container is already running.
-    ) else (
-        REM Container is stopped, try to start it
-        echo Starting existing MongoDB container...
-        docker start webgme-mongo > nul 2>&1
-        if %ERRORLEVEL% NEQ 0 (
-            REM Container failed to start, remove and recreate it
-            echo Container failed to start. Removing and recreating...
-            docker rm webgme-mongo > nul 2>&1
-            echo Creating and starting MongoDB container with persistent storage...
-            docker run --name webgme-mongo -d -p 27017:27017 -v webgme-data:/data/db mongo:4.4
-            if %ERRORLEVEL% NEQ 0 (
-                echo ERROR: Failed to create MongoDB container.
-                echo Please ensure Docker Desktop is running.
-                pause
-                exit /b 1
-            )
-            echo MongoDB container created and started with persistent volume 'webgme-data'.
-        ) else (
-            echo MongoDB container started successfully.
-        )
-    )
-) else (
-    REM Container doesn't exist, create it
-    echo Creating and starting MongoDB container with persistent storage...
-    docker run --name webgme-mongo -d -p 27017:27017 -v webgme-data:/data/db mongo:4.4
-    if %ERRORLEVEL% NEQ 0 (
-        echo ERROR: Failed to create MongoDB container.
-        echo Please ensure Docker Desktop is running.
-        pause
-        exit /b 1
-    )
-    echo MongoDB container created and started with persistent volume 'webgme-data'.
-    echo Your project data will persist across container restarts.
+    echo MongoDB container is already running.
+    goto :MONGODB_READY
 )
+
+REM Container is not running, check if it exists
+docker ps -a | find "webgme-mongo" >nul
+if %ERRORLEVEL% EQU 0 (
+    REM Container exists but is stopped/crashed, remove it
+    echo Container is stopped or crashed. Removing and recreating...
+    docker rm webgme-mongo
+    goto :CREATE_CONTAINER
+)
+
+REM Container doesn't exist
+:CREATE_CONTAINER
+echo Creating and starting MongoDB container with persistent storage...
+docker run --name webgme-mongo -d -p 27017:27017 -v webgme-data:/data/db mongo:4.4
+if %ERRORLEVEL% NEQ 0 (
+    echo ERROR: Failed to create MongoDB container.
+    echo Please ensure Docker Desktop is running.
+    pause
+    exit /b 1
+)
+echo MongoDB container created and started with persistent volume 'webgme-data'.
+echo Your project data will persist across container restarts.
+echo Waiting for MongoDB to initialize (5 seconds)...
+timeout /t 5 /nobreak
+
+:MONGODB_READY
 
 echo.
 echo [2/2] Starting WebGME server...
