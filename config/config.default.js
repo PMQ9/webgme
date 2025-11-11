@@ -34,6 +34,7 @@ config.visualization.layout.basePaths = [path.join(__dirname, '../src/client/js/
 
 // Plugin paths for MoE metamodel
 config.plugin.basePaths = [path.join(__dirname, '../src/plugins')];
+config.plugin.allowServerExecution = true; // Enable server-side plugin execution for MoE
 
 // config.storage.keyType = 'rustSHA1'; //check it out
 module.exports = config;
