@@ -169,6 +169,12 @@ define([
         core.setAttribute(elements.UltraVerifiableCNN_Expert, 'verification_tool', 'alpha-beta-CROWN');
         core.setAttribute(elements.UltraVerifiableCNN_Expert, 'verification_success_rate', '100% at ε=2/255');
         core.setAttribute(elements.UltraVerifiableCNN_Expert, 'recommended_use_case', 'Safety-critical systems requiring formal verification');
+        // Backbone layer details
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'backbone_layers',
+            'Conv1: 3->20 (32x32->16x16), Conv2: 20->28 (16x16->8x8), Conv3: 28->40 (8x8->4x4), Conv4: 40->56 (4x4->2x2), FC1: 224->128, FC2: 128->num_classes');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'num_conv_layers', 4);
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'num_fc_layers', 2);
+        core.setRegistry(elements.UltraVerifiableCNN_Expert, 'decorator', 'ExpertDecorator');
         core.setRegistry(elements.UltraVerifiableCNN_Expert, 'position', {x: 300, y: 200});
 
         // MicroCNN Expert
@@ -195,6 +201,12 @@ define([
         core.setAttribute(elements.MicroCNN_Expert, 'verification_tool', 'sampling-based');
         core.setAttribute(elements.MicroCNN_Expert, 'accuracy_range', '95-97%');
         core.setAttribute(elements.MicroCNN_Expert, 'recommended_use_case', 'Edge devices and resource-constrained environments');
+        // Backbone layer details
+        core.setAttribute(elements.MicroCNN_Expert, 'backbone_layers',
+            'Conv1: 3->32 (32x32->16x16), Conv2: 32->64 (16x16->8x8), Conv3: 64->64 (8x8->4x4), FC: 1024->num_classes');
+        core.setAttribute(elements.MicroCNN_Expert, 'num_conv_layers', 3);
+        core.setAttribute(elements.MicroCNN_Expert, 'num_fc_layers', 1);
+        core.setRegistry(elements.MicroCNN_Expert, 'decorator', 'ExpertDecorator');
         core.setRegistry(elements.MicroCNN_Expert, 'position', {x: 300, y: 300});
 
         // TinyCNN Expert
@@ -222,6 +234,12 @@ define([
         core.setAttribute(elements.TinyCNN_Expert, 'accuracy_range', '95-98% (CIFAR-10: 95%, MNIST: 98%)');
         core.setAttribute(elements.TinyCNN_Expert, 'optimal_datasets', 'CIFAR-10, MNIST');
         core.setAttribute(elements.TinyCNN_Expert, 'recommended_use_case', 'Medium-complexity image classification with robustness requirements');
+        // Backbone layer details
+        core.setAttribute(elements.TinyCNN_Expert, 'backbone_layers',
+            'Conv1: 3->32 (32x32->16x16), Conv2: 32->64 (16x16->8x8), Conv3: 64->128 (8x8->4x4), FC1: 2048->256, FC2: 256->num_classes');
+        core.setAttribute(elements.TinyCNN_Expert, 'num_conv_layers', 3);
+        core.setAttribute(elements.TinyCNN_Expert, 'num_fc_layers', 2);
+        core.setRegistry(elements.TinyCNN_Expert, 'decorator', 'ExpertDecorator');
         core.setRegistry(elements.TinyCNN_Expert, 'position', {x: 300, y: 400});
 
         // SmallCNN Expert
@@ -250,6 +268,12 @@ define([
         core.setAttribute(elements.SmallCNN_Expert, 'accuracy_range', '97-99% (GTSRB)');
         core.setAttribute(elements.SmallCNN_Expert, 'optimal_datasets', 'GTSRB (43 classes), complex datasets');
         core.setAttribute(elements.SmallCNN_Expert, 'recommended_use_case', 'High-complexity classification requiring maximum accuracy');
+        // Backbone layer details
+        core.setAttribute(elements.SmallCNN_Expert, 'backbone_layers',
+            'Conv1: 3->64 (32x32->16x16), Conv2: 64->128 (16x16->8x8), Conv3: 128->256 (8x8->4x4), Conv4: 256->256 (4x4->2x2), FC1: 1024->512, FC2: 512->num_classes');
+        core.setAttribute(elements.SmallCNN_Expert, 'num_conv_layers', 4);
+        core.setAttribute(elements.SmallCNN_Expert, 'num_fc_layers', 2);
+        core.setRegistry(elements.SmallCNN_Expert, 'decorator', 'ExpertDecorator');
         core.setRegistry(elements.SmallCNN_Expert, 'position', {x: 300, y: 500});
 
         // 4. Create Router
