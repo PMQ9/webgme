@@ -141,6 +141,7 @@ define([
         core.setAttribute(elements.ExpertModel, 'frozen', false);
         core.setAttribute(elements.ExpertModel, 'accuracy', 0.0);
         core.setAttribute(elements.ExpertModel, 'model_path', '');
+        core.setAttribute(elements.ExpertModel, 'description', 'Base class for neural network expert models. Configure specific architecture using the derived expert types.');
         core.setRegistry(elements.ExpertModel, 'position', {x: 300, y: 100});
 
         // 3. Create specific expert architectures
@@ -152,6 +153,22 @@ define([
         core.setAttribute(elements.UltraVerifiableCNN_Expert, 'name', 'UltraVerifiableCNN_Expert');
         core.setAttribute(elements.UltraVerifiableCNN_Expert, 'architecture', 'ultra_verifiable_cnn');
         core.setAttribute(elements.UltraVerifiableCNN_Expert, 'num_params', 96000);
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'description',
+            'Optimized for formal verification. Uses 3x3 conv kernels, AvgPool (not MaxPool) for linear operations, ' +
+            'no BatchNorm for deterministic behavior, gradual channel growth (20→28→40→56), and raw logits output ' +
+            '(no softmax). Best for safety-critical applications requiring provable guarantees. Successfully verified ' +
+            'with alpha-beta-CROWN (100% success rate at ε=2/255).');
+        // Architectural details as attributes
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'kernel_size', '3x3');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'pooling_type', 'AvgPool');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'uses_batchnorm', false);
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'activation_function', 'ReLU');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'channel_progression', '20→28→40→56');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'output_layer_type', 'raw_logits (no softmax)');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'verification_compatible', true);
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'verification_tool', 'alpha-beta-CROWN');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'verification_success_rate', '100% at ε=2/255');
+        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'recommended_use_case', 'Safety-critical systems requiring formal verification');
         core.setRegistry(elements.UltraVerifiableCNN_Expert, 'position', {x: 300, y: 200});
 
         // MicroCNN Expert
@@ -162,6 +179,22 @@ define([
         core.setAttribute(elements.MicroCNN_Expert, 'name', 'MicroCNN_Expert');
         core.setAttribute(elements.MicroCNN_Expert, 'architecture', 'micro_cnn');
         core.setAttribute(elements.MicroCNN_Expert, 'num_params', 67000);
+        core.setAttribute(elements.MicroCNN_Expert, 'description',
+            'Compact and efficient CNN architecture with only 67K parameters. Designed for resource-constrained ' +
+            'environments requiring fast inference. Uses standard convolutions with 3x3 kernels and ReLU activations. ' +
+            'Achieves 95-97% accuracy on standard benchmarks. Suitable for edge devices and real-time applications ' +
+            'where model size and speed are critical. Supports sampling-based verification.');
+        // Architectural details as attributes
+        core.setAttribute(elements.MicroCNN_Expert, 'kernel_size', '3x3');
+        core.setAttribute(elements.MicroCNN_Expert, 'pooling_type', 'MaxPool');
+        core.setAttribute(elements.MicroCNN_Expert, 'uses_batchnorm', false);
+        core.setAttribute(elements.MicroCNN_Expert, 'activation_function', 'ReLU');
+        core.setAttribute(elements.MicroCNN_Expert, 'channel_progression', 'Compact (67K total)');
+        core.setAttribute(elements.MicroCNN_Expert, 'output_layer_type', 'softmax');
+        core.setAttribute(elements.MicroCNN_Expert, 'verification_compatible', true);
+        core.setAttribute(elements.MicroCNN_Expert, 'verification_tool', 'sampling-based');
+        core.setAttribute(elements.MicroCNN_Expert, 'accuracy_range', '95-97%');
+        core.setAttribute(elements.MicroCNN_Expert, 'recommended_use_case', 'Edge devices and resource-constrained environments');
         core.setRegistry(elements.MicroCNN_Expert, 'position', {x: 300, y: 300});
 
         // TinyCNN Expert
@@ -172,6 +205,23 @@ define([
         core.setAttribute(elements.TinyCNN_Expert, 'name', 'TinyCNN_Expert');
         core.setAttribute(elements.TinyCNN_Expert, 'architecture', 'tiny_cnn');
         core.setAttribute(elements.TinyCNN_Expert, 'num_params', 620000);
+        core.setAttribute(elements.TinyCNN_Expert, 'description',
+            'Medium-sized CNN with 620K parameters, optimized for CIFAR-10 and MNIST datasets. Uses 3x3 convolutional ' +
+            'layers with BatchNorm and ReLU activations, MaxPool for downsampling, and dropout for regularization. ' +
+            'Achieves 95-98% accuracy (95% on CIFAR-10, 98% on MNIST). Supports adversarial training with TRADES ' +
+            '(β=6.0) for improved robustness. Good balance between model capacity and computational efficiency. ' +
+            'Suitable for medium-complexity image classification tasks.');
+        // Architectural details as attributes
+        core.setAttribute(elements.TinyCNN_Expert, 'kernel_size', '3x3');
+        core.setAttribute(elements.TinyCNN_Expert, 'pooling_type', 'MaxPool');
+        core.setAttribute(elements.TinyCNN_Expert, 'uses_batchnorm', true);
+        core.setAttribute(elements.TinyCNN_Expert, 'activation_function', 'ReLU');
+        core.setAttribute(elements.TinyCNN_Expert, 'regularization', 'dropout');
+        core.setAttribute(elements.TinyCNN_Expert, 'output_layer_type', 'softmax');
+        core.setAttribute(elements.TinyCNN_Expert, 'adversarial_training', 'TRADES (β=6.0)');
+        core.setAttribute(elements.TinyCNN_Expert, 'accuracy_range', '95-98% (CIFAR-10: 95%, MNIST: 98%)');
+        core.setAttribute(elements.TinyCNN_Expert, 'optimal_datasets', 'CIFAR-10, MNIST');
+        core.setAttribute(elements.TinyCNN_Expert, 'recommended_use_case', 'Medium-complexity image classification with robustness requirements');
         core.setRegistry(elements.TinyCNN_Expert, 'position', {x: 300, y: 400});
 
         // SmallCNN Expert
@@ -182,6 +232,24 @@ define([
         core.setAttribute(elements.SmallCNN_Expert, 'name', 'SmallCNN_Expert');
         core.setAttribute(elements.SmallCNN_Expert, 'architecture', 'small_cnn');
         core.setAttribute(elements.SmallCNN_Expert, 'num_params', 1500000);
+        core.setAttribute(elements.SmallCNN_Expert, 'description',
+            'Large-capacity CNN with 1.5M parameters, designed for complex datasets like GTSRB (43 traffic sign classes). ' +
+            'Features deeper architecture with multiple 3x3 convolutional blocks, BatchNorm for training stability, ' +
+            'MaxPool for spatial reduction, and extensive dropout for preventing overfitting. Achieves 97-99% accuracy ' +
+            'on GTSRB. Uses softmax output layer for multi-class classification. Best suited for high-complexity ' +
+            'classification tasks requiring maximum accuracy. Supports adversarial training for robustness.');
+        // Architectural details as attributes
+        core.setAttribute(elements.SmallCNN_Expert, 'kernel_size', '3x3');
+        core.setAttribute(elements.SmallCNN_Expert, 'pooling_type', 'MaxPool');
+        core.setAttribute(elements.SmallCNN_Expert, 'uses_batchnorm', true);
+        core.setAttribute(elements.SmallCNN_Expert, 'activation_function', 'ReLU');
+        core.setAttribute(elements.SmallCNN_Expert, 'regularization', 'extensive dropout');
+        core.setAttribute(elements.SmallCNN_Expert, 'output_layer_type', 'softmax');
+        core.setAttribute(elements.SmallCNN_Expert, 'architecture_depth', 'deep (multiple conv blocks)');
+        core.setAttribute(elements.SmallCNN_Expert, 'adversarial_training', 'supported');
+        core.setAttribute(elements.SmallCNN_Expert, 'accuracy_range', '97-99% (GTSRB)');
+        core.setAttribute(elements.SmallCNN_Expert, 'optimal_datasets', 'GTSRB (43 classes), complex datasets');
+        core.setAttribute(elements.SmallCNN_Expert, 'recommended_use_case', 'High-complexity classification requiring maximum accuracy');
         core.setRegistry(elements.SmallCNN_Expert, 'position', {x: 300, y: 500});
 
         // 4. Create Router
@@ -194,6 +262,23 @@ define([
         core.setAttribute(elements.Router, 'top_k', 1);
         core.setAttribute(elements.Router, 'temperature', 1.0);
         core.setAttribute(elements.Router, 'num_experts', 2);
+        core.setAttribute(elements.Router, 'description',
+            'Gating network (MetaGatingNet) that routes inputs to appropriate experts. Uses the same backbone architecture ' +
+            'as experts (typically ultra_verifiable_cnn with 96K params). Outputs raw logits (no softmax) for expert ' +
+            'selection. Top-k parameter controls how many experts are activated per input (typically 1 for sparse routing). ' +
+            'Achieves 99.97% routing accuracy on dataset-level classification. Supports formal verification with ' +
+            'alpha-beta-CROWN for provable routing correctness.');
+        // Architectural details as attributes
+        core.setAttribute(elements.Router, 'router_type', 'MetaGatingNet (dataset-level)');
+        core.setAttribute(elements.Router, 'routing_strategy', 'sparse (top-k)');
+        core.setAttribute(elements.Router, 'kernel_size', '3x3 (if ultra_verifiable_cnn)');
+        core.setAttribute(elements.Router, 'pooling_type', 'AvgPool (if ultra_verifiable_cnn)');
+        core.setAttribute(elements.Router, 'uses_batchnorm', false);
+        core.setAttribute(elements.Router, 'output_type', 'raw logits (no softmax/temperature during inference)');
+        core.setAttribute(elements.Router, 'routing_accuracy', '99.97%');
+        core.setAttribute(elements.Router, 'verification_compatible', true);
+        core.setAttribute(elements.Router, 'verification_tool', 'alpha-beta-CROWN');
+        core.setAttribute(elements.Router, 'recommended_top_k', '1 (sparse routing)');
         core.setRegistry(elements.Router, 'position', {x: 500, y: 100});
 
         // 5. Create Dataset types
