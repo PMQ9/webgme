@@ -4,7 +4,7 @@
  *
  * Usage:
  *   node predict_inference_time.js --total 4 --active 3
- *   node predict_inference_time.js --table
+ *   node predict_inference_time.js --table --table-max 10
  */
 
 const COEFFICIENTS = {
@@ -14,8 +14,8 @@ const COEFFICIENTS = {
 };
 
 function predict(total, active) {
-  if (total < 1 || total > 5) {
-    throw new Error("total_experts must be between 1 and 5");
+  if (total < 1) {
+    throw new Error("total_experts must be at least 1");
   }
   if (active < 1 || active > total) {
     throw new Error("active_experts must be between 1 and total_experts");
@@ -30,6 +30,8 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--table") {
       args.table = true;
+    } else if (arg === "--table-max") {
+      args.tableMax = Number(argv[++i]);
     } else if (arg === "--total") {
       args.total = Number(argv[++i]);
     } else if (arg === "--active") {
@@ -41,9 +43,9 @@ function parseArgs(argv) {
   return args;
 }
 
-function printTable() {
+function printTable(maxTotal = 10) {
   console.log("Predicted inference time (same units as training data):");
-  for (let total = 1; total <= 5; total++) {
+  for (let total = 1; total <= maxTotal; total++) {
     for (let active = 1; active <= total; active++) {
       const pred = predict(total, active);
       console.log(`total=${total} active=${active} -> ${pred.toFixed(5)}`);
@@ -61,7 +63,12 @@ function main() {
   }
 
   if (args.table) {
-    printTable();
+    const maxTotal = args.tableMax ?? 10;
+    if (!Number.isFinite(maxTotal) || maxTotal < 1) {
+      console.error("--table-max must be a positive integer");
+      process.exit(1);
+    }
+    printTable(maxTotal);
     return;
   }
 
