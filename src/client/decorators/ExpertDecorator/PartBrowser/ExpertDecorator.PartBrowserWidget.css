@@ -1,0 +1,19 @@
+.expert-decorator {
+    position: relative;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: #fff;
+    padding: 5px;
+}
+
+.expert-decorator .name {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.expert-decorator .backbone-layers {
+    font-size: 9px;
+    color: #666;
+    margin-top: 3px;
+}

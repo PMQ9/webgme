@@ -129,74 +129,182 @@ define([
         core.setRegistry(elements.MoE_System, 'isAbstract', false);
         core.setRegistry(elements.MoE_System, 'position', {x: 100, y: 100});
 
-        // 2. Create ExpertModel base
+        // 2. Create Backbone base class (neural network architectures)
+        elements.Backbone = core.createNode({
+            parent: rootNode,
+            base: baseNode
+        });
+        core.setAttribute(elements.Backbone, 'name', 'Backbone');
+        core.setRegistry(elements.Backbone, 'isAbstract', false);
+        core.setAttribute(elements.Backbone, 'architecture_name', 'ultra_verifiable_cnn');
+        core.setAttribute(elements.Backbone, 'num_params', 96000);
+        core.setAttribute(elements.Backbone, 'description', 'Base class for neural network architectures. Backbones can be used by both Experts and Routers.');
+        core.setRegistry(elements.Backbone, 'position', {x: 500, y: 100});
+
+        // 3. Create specific backbone architectures
+        // UltraVerifiableCNN Backbone
+        elements.UltraVerifiableCNN = core.createNode({
+            parent: rootNode,
+            base: elements.Backbone
+        });
+        core.setAttribute(elements.UltraVerifiableCNN, 'name', 'UltraVerifiableCNN');
+        core.setAttribute(elements.UltraVerifiableCNN, 'architecture_name', 'ultra_verifiable_cnn');
+        core.setAttribute(elements.UltraVerifiableCNN, 'num_params', 96000);
+        core.setAttribute(elements.UltraVerifiableCNN, 'description',
+            'Optimized for formal verification. Uses 3x3 conv kernels, AvgPool (not MaxPool) for linear operations, ' +
+            'no BatchNorm for deterministic behavior, gradual channel growth (20→28→40→56), and raw logits output ' +
+            '(no softmax). Best for safety-critical applications requiring provable guarantees. Successfully verified ' +
+            'with alpha-beta-CROWN (100% success rate at ε=2/255).');
+        // Architectural details as attributes
+        core.setAttribute(elements.UltraVerifiableCNN, 'kernel_size', '3x3');
+        core.setAttribute(elements.UltraVerifiableCNN, 'pooling_type', 'AvgPool');
+        core.setAttribute(elements.UltraVerifiableCNN, 'uses_batchnorm', false);
+        core.setAttribute(elements.UltraVerifiableCNN, 'activation_function', 'ReLU');
+        core.setAttribute(elements.UltraVerifiableCNN, 'channel_progression', '20→28→40→56');
+        core.setAttribute(elements.UltraVerifiableCNN, 'output_layer_type', 'raw_logits (no softmax)');
+        core.setAttribute(elements.UltraVerifiableCNN, 'verification_compatible', true);
+        core.setAttribute(elements.UltraVerifiableCNN, 'verification_tool', 'alpha-beta-CROWN');
+        core.setAttribute(elements.UltraVerifiableCNN, 'verification_success_rate', '100% at ε=2/255');
+        core.setAttribute(elements.UltraVerifiableCNN, 'recommended_use_case', 'Safety-critical systems requiring formal verification');
+        // Backbone layer details
+        core.setAttribute(elements.UltraVerifiableCNN, 'backbone_layers',
+            'Conv1: 3->20 (32x32->16x16), Conv2: 20->28 (16x16->8x8), Conv3: 28->40 (8x8->4x4), Conv4: 40->56 (4x4->2x2), FC1: 224->128, FC2: 128->num_classes');
+        core.setAttribute(elements.UltraVerifiableCNN, 'num_conv_layers', 4);
+        core.setAttribute(elements.UltraVerifiableCNN, 'num_fc_layers', 2);
+        core.setRegistry(elements.UltraVerifiableCNN, 'decorator', 'ExpertDecorator');
+        core.setRegistry(elements.UltraVerifiableCNN, 'position', {x: 500, y: 200});
+
+        // MicroCNN Backbone
+        elements.MicroCNN = core.createNode({
+            parent: rootNode,
+            base: elements.Backbone
+        });
+        core.setAttribute(elements.MicroCNN, 'name', 'MicroCNN');
+        core.setAttribute(elements.MicroCNN, 'architecture_name', 'micro_cnn');
+        core.setAttribute(elements.MicroCNN, 'num_params', 67000);
+        core.setAttribute(elements.MicroCNN, 'description',
+            'Compact and efficient CNN architecture with only 67K parameters. Designed for resource-constrained ' +
+            'environments requiring fast inference. Uses standard convolutions with 3x3 kernels and ReLU activations. ' +
+            'Achieves 95-97% accuracy on standard benchmarks. Suitable for edge devices and real-time applications ' +
+            'where model size and speed are critical. Supports sampling-based verification.');
+        // Architectural details as attributes
+        core.setAttribute(elements.MicroCNN, 'kernel_size', '3x3');
+        core.setAttribute(elements.MicroCNN, 'pooling_type', 'MaxPool');
+        core.setAttribute(elements.MicroCNN, 'uses_batchnorm', false);
+        core.setAttribute(elements.MicroCNN, 'activation_function', 'ReLU');
+        core.setAttribute(elements.MicroCNN, 'channel_progression', 'Compact (67K total)');
+        core.setAttribute(elements.MicroCNN, 'output_layer_type', 'softmax');
+        core.setAttribute(elements.MicroCNN, 'verification_compatible', true);
+        core.setAttribute(elements.MicroCNN, 'verification_tool', 'sampling-based');
+        core.setAttribute(elements.MicroCNN, 'accuracy_range', '95-97%');
+        core.setAttribute(elements.MicroCNN, 'recommended_use_case', 'Edge devices and resource-constrained environments');
+        // Backbone layer details
+        core.setAttribute(elements.MicroCNN, 'backbone_layers',
+            'Conv1: 3->32 (32x32->16x16), Conv2: 32->64 (16x16->8x8), Conv3: 64->64 (8x8->4x4), FC: 1024->num_classes');
+        core.setAttribute(elements.MicroCNN, 'num_conv_layers', 3);
+        core.setAttribute(elements.MicroCNN, 'num_fc_layers', 1);
+        core.setRegistry(elements.MicroCNN, 'decorator', 'ExpertDecorator');
+        core.setRegistry(elements.MicroCNN, 'position', {x: 500, y: 300});
+
+        // TinyCNN Backbone
+        elements.TinyCNN = core.createNode({
+            parent: rootNode,
+            base: elements.Backbone
+        });
+        core.setAttribute(elements.TinyCNN, 'name', 'TinyCNN');
+        core.setAttribute(elements.TinyCNN, 'architecture_name', 'tiny_cnn');
+        core.setAttribute(elements.TinyCNN, 'num_params', 620000);
+        core.setAttribute(elements.TinyCNN, 'description',
+            'Medium-sized CNN with 620K parameters, optimized for CIFAR-10 and MNIST datasets. Uses 3x3 convolutional ' +
+            'layers with BatchNorm and ReLU activations, MaxPool for downsampling, and dropout for regularization. ' +
+            'Achieves 95-98% accuracy (95% on CIFAR-10, 98% on MNIST). Supports adversarial training with TRADES ' +
+            '(β=6.0) for improved robustness. Good balance between model capacity and computational efficiency. ' +
+            'Suitable for medium-complexity image classification tasks.');
+        // Architectural details as attributes
+        core.setAttribute(elements.TinyCNN, 'kernel_size', '3x3');
+        core.setAttribute(elements.TinyCNN, 'pooling_type', 'MaxPool');
+        core.setAttribute(elements.TinyCNN, 'uses_batchnorm', true);
+        core.setAttribute(elements.TinyCNN, 'activation_function', 'ReLU');
+        core.setAttribute(elements.TinyCNN, 'regularization', 'dropout');
+        core.setAttribute(elements.TinyCNN, 'output_layer_type', 'softmax');
+        core.setAttribute(elements.TinyCNN, 'adversarial_training', 'TRADES (β=6.0)');
+        core.setAttribute(elements.TinyCNN, 'accuracy_range', '95-98% (CIFAR-10: 95%, MNIST: 98%)');
+        core.setAttribute(elements.TinyCNN, 'optimal_datasets', 'CIFAR-10, MNIST');
+        core.setAttribute(elements.TinyCNN, 'recommended_use_case', 'Medium-complexity image classification with robustness requirements');
+        // Backbone layer details
+        core.setAttribute(elements.TinyCNN, 'backbone_layers',
+            'Conv1: 3->32 (32x32->16x16), Conv2: 32->64 (16x16->8x8), Conv3: 64->128 (8x8->4x4), FC1: 2048->256, FC2: 256->num_classes');
+        core.setAttribute(elements.TinyCNN, 'num_conv_layers', 3);
+        core.setAttribute(elements.TinyCNN, 'num_fc_layers', 2);
+        core.setRegistry(elements.TinyCNN, 'decorator', 'ExpertDecorator');
+        core.setRegistry(elements.TinyCNN, 'position', {x: 500, y: 400});
+
+        // SmallCNN Backbone
+        elements.SmallCNN = core.createNode({
+            parent: rootNode,
+            base: elements.Backbone
+        });
+        core.setAttribute(elements.SmallCNN, 'name', 'SmallCNN');
+        core.setAttribute(elements.SmallCNN, 'architecture_name', 'small_cnn');
+        core.setAttribute(elements.SmallCNN, 'num_params', 1500000);
+        core.setAttribute(elements.SmallCNN, 'description',
+            'Large-capacity CNN with 1.5M parameters, designed for complex datasets like GTSRB (43 traffic sign classes). ' +
+            'Features deeper architecture with multiple 3x3 convolutional blocks, BatchNorm for training stability, ' +
+            'MaxPool for spatial reduction, and extensive dropout for preventing overfitting. Achieves 97-99% accuracy ' +
+            'on GTSRB. Uses softmax output layer for multi-class classification. Best suited for high-complexity ' +
+            'classification tasks requiring maximum accuracy. Supports adversarial training for robustness.');
+        // Architectural details as attributes
+        core.setAttribute(elements.SmallCNN, 'kernel_size', '3x3');
+        core.setAttribute(elements.SmallCNN, 'pooling_type', 'MaxPool');
+        core.setAttribute(elements.SmallCNN, 'uses_batchnorm', true);
+        core.setAttribute(elements.SmallCNN, 'activation_function', 'ReLU');
+        core.setAttribute(elements.SmallCNN, 'regularization', 'extensive dropout');
+        core.setAttribute(elements.SmallCNN, 'output_layer_type', 'softmax');
+        core.setAttribute(elements.SmallCNN, 'architecture_depth', 'deep (multiple conv blocks)');
+        core.setAttribute(elements.SmallCNN, 'adversarial_training', 'supported');
+        core.setAttribute(elements.SmallCNN, 'accuracy_range', '97-99% (GTSRB)');
+        core.setAttribute(elements.SmallCNN, 'optimal_datasets', 'GTSRB (43 classes), complex datasets');
+        core.setAttribute(elements.SmallCNN, 'recommended_use_case', 'High-complexity classification requiring maximum accuracy');
+        // Backbone layer details
+        core.setAttribute(elements.SmallCNN, 'backbone_layers',
+            'Conv1: 3->64 (32x32->16x16), Conv2: 64->128 (16x16->8x8), Conv3: 128->256 (8x8->4x4), Conv4: 256->256 (4x4->2x2), FC1: 1024->512, FC2: 512->num_classes');
+        core.setAttribute(elements.SmallCNN, 'num_conv_layers', 4);
+        core.setAttribute(elements.SmallCNN, 'num_fc_layers', 2);
+        core.setRegistry(elements.SmallCNN, 'decorator', 'ExpertDecorator');
+        core.setRegistry(elements.SmallCNN, 'position', {x: 500, y: 500});
+
+        // 4. Create ExpertModel (uses a Backbone)
         elements.ExpertModel = core.createNode({
             parent: rootNode,
             base: baseNode
         });
         core.setAttribute(elements.ExpertModel, 'name', 'ExpertModel');
         core.setRegistry(elements.ExpertModel, 'isAbstract', false);
-        core.setAttribute(elements.ExpertModel, 'architecture', 'ultra_verifiable_cnn');
-        core.setAttribute(elements.ExpertModel, 'num_params', 96000);
         core.setAttribute(elements.ExpertModel, 'frozen', false);
         core.setAttribute(elements.ExpertModel, 'accuracy', 0.0);
         core.setAttribute(elements.ExpertModel, 'model_path', '');
+        core.setAttribute(elements.ExpertModel, 'description', 'Expert model that uses a Backbone architecture. An expert is trained on a specific dataset.');
         core.setRegistry(elements.ExpertModel, 'position', {x: 300, y: 100});
 
-        // 3. Create specific expert architectures
-        // UltraVerifiableCNN Expert
-        elements.UltraVerifiableCNN_Expert = core.createNode({
-            parent: rootNode,
-            base: elements.ExpertModel
-        });
-        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'name', 'UltraVerifiableCNN_Expert');
-        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'architecture', 'ultra_verifiable_cnn');
-        core.setAttribute(elements.UltraVerifiableCNN_Expert, 'num_params', 96000);
-        core.setRegistry(elements.UltraVerifiableCNN_Expert, 'position', {x: 300, y: 200});
-
-        // MicroCNN Expert
-        elements.MicroCNN_Expert = core.createNode({
-            parent: rootNode,
-            base: elements.ExpertModel
-        });
-        core.setAttribute(elements.MicroCNN_Expert, 'name', 'MicroCNN_Expert');
-        core.setAttribute(elements.MicroCNN_Expert, 'architecture', 'micro_cnn');
-        core.setAttribute(elements.MicroCNN_Expert, 'num_params', 67000);
-        core.setRegistry(elements.MicroCNN_Expert, 'position', {x: 300, y: 300});
-
-        // TinyCNN Expert
-        elements.TinyCNN_Expert = core.createNode({
-            parent: rootNode,
-            base: elements.ExpertModel
-        });
-        core.setAttribute(elements.TinyCNN_Expert, 'name', 'TinyCNN_Expert');
-        core.setAttribute(elements.TinyCNN_Expert, 'architecture', 'tiny_cnn');
-        core.setAttribute(elements.TinyCNN_Expert, 'num_params', 620000);
-        core.setRegistry(elements.TinyCNN_Expert, 'position', {x: 300, y: 400});
-
-        // SmallCNN Expert
-        elements.SmallCNN_Expert = core.createNode({
-            parent: rootNode,
-            base: elements.ExpertModel
-        });
-        core.setAttribute(elements.SmallCNN_Expert, 'name', 'SmallCNN_Expert');
-        core.setAttribute(elements.SmallCNN_Expert, 'architecture', 'small_cnn');
-        core.setAttribute(elements.SmallCNN_Expert, 'num_params', 1500000);
-        core.setRegistry(elements.SmallCNN_Expert, 'position', {x: 300, y: 500});
-
-        // 4. Create Router
+        // 5. Create Router (uses a Backbone)
         elements.Router = core.createNode({
             parent: rootNode,
             base: baseNode
         });
         core.setAttribute(elements.Router, 'name', 'Router');
-        core.setAttribute(elements.Router, 'backbone_arch', 'ultra_verifiable_cnn');
         core.setAttribute(elements.Router, 'top_k', 1);
         core.setAttribute(elements.Router, 'temperature', 1.0);
         core.setAttribute(elements.Router, 'num_experts', 2);
-        core.setRegistry(elements.Router, 'position', {x: 500, y: 100});
+        core.setAttribute(elements.Router, 'routing_accuracy', 0.0);
+        core.setAttribute(elements.Router, 'description',
+            'Gating network (MetaGatingNet) that routes inputs to appropriate experts. Uses a Backbone architecture ' +
+            '(typically UltraVerifiableCNN). Outputs raw logits (no softmax) for expert selection. Top-k parameter ' +
+            'controls how many experts are activated per input (typically 1 for sparse routing). ' +
+            'Achieves 99.97% routing accuracy on dataset-level classification. Supports formal verification with ' +
+            'alpha-beta-CROWN for provable routing correctness.');
+        core.setRegistry(elements.Router, 'position', {x: 300, y: 300});
 
-        // 5. Create Dataset types
+        // 6. Create Dataset types
         elements.Dataset = core.createNode({
             parent: rootNode,
             base: baseNode
@@ -320,20 +428,21 @@ define([
                 // Layout positions for Meta view (arrange in a grid)
                 MoE_System: {x: 100, y: 100},
                 ExpertModel: {x: 300, y: 100},
-                UltraVerifiableCNN_Expert: {x: 300, y: 200},
-                MicroCNN_Expert: {x: 300, y: 300},
-                TinyCNN_Expert: {x: 300, y: 400},
-                SmallCNN_Expert: {x: 300, y: 500},
-                Router: {x: 500, y: 100},
+                Router: {x: 300, y: 300},
+                Backbone: {x: 500, y: 100},
+                UltraVerifiableCNN: {x: 500, y: 200},
+                MicroCNN: {x: 500, y: 300},
+                TinyCNN: {x: 500, y: 400},
+                SmallCNN: {x: 500, y: 500},
                 Dataset: {x: 700, y: 100},
                 GTSRB_Dataset: {x: 700, y: 200},
                 CIFAR10_Dataset: {x: 700, y: 300},
                 MNIST_Dataset: {x: 700, y: 400},
                 MetaMoE: {x: 900, y: 100},
                 TrainingConfig: {x: 900, y: 300},
-                TrainedOn: {x: 500, y: 300},
-                RoutesTo: {x: 500, y: 400},
-                UsesConfig: {x: 500, y: 500}
+                TrainedOn: {x: 650, y: 250},
+                RoutesTo: {x: 650, y: 350},
+                UsesConfig: {x: 650, y: 450}
             },
             key, pos;
 
@@ -370,11 +479,12 @@ define([
         // Make all main types creatable (will show in Part Browser when MoE_System is selected)
         core.setChildMeta(rootNode, elements.MetaMoE, 0, -1);
         core.setChildMeta(rootNode, elements.ExpertModel, 0, -1);
-        core.setChildMeta(rootNode, elements.UltraVerifiableCNN_Expert, 0, -1);
-        core.setChildMeta(rootNode, elements.MicroCNN_Expert, 0, -1);
-        core.setChildMeta(rootNode, elements.TinyCNN_Expert, 0, -1);
-        core.setChildMeta(rootNode, elements.SmallCNN_Expert, 0, -1);
         core.setChildMeta(rootNode, elements.Router, 0, -1);
+        core.setChildMeta(rootNode, elements.Backbone, 0, -1);
+        core.setChildMeta(rootNode, elements.UltraVerifiableCNN, 0, -1);
+        core.setChildMeta(rootNode, elements.MicroCNN, 0, -1);
+        core.setChildMeta(rootNode, elements.TinyCNN, 0, -1);
+        core.setChildMeta(rootNode, elements.SmallCNN, 0, -1);
         core.setChildMeta(rootNode, elements.Dataset, 0, -1);
         core.setChildMeta(rootNode, elements.GTSRB_Dataset, 0, -1);
         core.setChildMeta(rootNode, elements.CIFAR10_Dataset, 0, -1);
@@ -384,14 +494,15 @@ define([
         core.setChildMeta(rootNode, elements.RoutesTo, 0, -1);
         core.setChildMeta(rootNode, elements.UsesConfig, 0, -1);
 
-        // MoE_System can contain: MetaMoE, ExpertModel, Router, Dataset, TrainingConfig
+        // MoE_System can contain: MetaMoE, ExpertModel, Router, Backbones, Datasets, TrainingConfig
         core.setChildMeta(elements.MoE_System, elements.MetaMoE, 0, -1);
         core.setChildMeta(elements.MoE_System, elements.ExpertModel, 0, -1);
-        core.setChildMeta(elements.MoE_System, elements.UltraVerifiableCNN_Expert, 0, -1);
-        core.setChildMeta(elements.MoE_System, elements.MicroCNN_Expert, 0, -1);
-        core.setChildMeta(elements.MoE_System, elements.TinyCNN_Expert, 0, -1);
-        core.setChildMeta(elements.MoE_System, elements.SmallCNN_Expert, 0, -1);
         core.setChildMeta(elements.MoE_System, elements.Router, 0, -1);
+        core.setChildMeta(elements.MoE_System, elements.Backbone, 0, -1);
+        core.setChildMeta(elements.MoE_System, elements.UltraVerifiableCNN, 0, -1);
+        core.setChildMeta(elements.MoE_System, elements.MicroCNN, 0, -1);
+        core.setChildMeta(elements.MoE_System, elements.TinyCNN, 0, -1);
+        core.setChildMeta(elements.MoE_System, elements.SmallCNN, 0, -1);
         core.setChildMeta(elements.MoE_System, elements.Dataset, 0, -1);
         core.setChildMeta(elements.MoE_System, elements.GTSRB_Dataset, 0, -1);
         core.setChildMeta(elements.MoE_System, elements.CIFAR10_Dataset, 0, -1);
@@ -401,13 +512,23 @@ define([
         core.setChildMeta(elements.MoE_System, elements.RoutesTo, 0, -1);
         core.setChildMeta(elements.MoE_System, elements.UsesConfig, 0, -1);
 
+        // ExpertModel can contain: exactly 1 Backbone
+        core.setChildMeta(elements.ExpertModel, elements.Backbone, 1, 1);
+        core.setChildMeta(elements.ExpertModel, elements.UltraVerifiableCNN, 0, 1);
+        core.setChildMeta(elements.ExpertModel, elements.MicroCNN, 0, 1);
+        core.setChildMeta(elements.ExpertModel, elements.TinyCNN, 0, 1);
+        core.setChildMeta(elements.ExpertModel, elements.SmallCNN, 0, 1);
+
+        // Router can contain: exactly 1 Backbone
+        core.setChildMeta(elements.Router, elements.Backbone, 1, 1);
+        core.setChildMeta(elements.Router, elements.UltraVerifiableCNN, 0, 1);
+        core.setChildMeta(elements.Router, elements.MicroCNN, 0, 1);
+        core.setChildMeta(elements.Router, elements.TinyCNN, 0, 1);
+        core.setChildMeta(elements.Router, elements.SmallCNN, 0, 1);
+
         // MetaMoE can contain: Router and Experts
         core.setChildMeta(elements.MetaMoE, elements.Router, 1, 1); // exactly 1 router
         core.setChildMeta(elements.MetaMoE, elements.ExpertModel, 2, -1); // at least 2 experts
-        core.setChildMeta(elements.MetaMoE, elements.UltraVerifiableCNN_Expert, 0, -1);
-        core.setChildMeta(elements.MetaMoE, elements.MicroCNN_Expert, 0, -1);
-        core.setChildMeta(elements.MetaMoE, elements.TinyCNN_Expert, 0, -1);
-        core.setChildMeta(elements.MetaMoE, elements.SmallCNN_Expert, 0, -1);
 
         // Set pointer meta (connections)
         // TrainedOn: src=ExpertModel, dst=Dataset
