@@ -1,0 +1,95 @@
+================================================================================
+METAMOE INFERENCE AND TRAINING TIME FORMULAS
+================================================================================
+
+Based on experimental data from:
+"Formal and Empirical Verification of Compositional Robustness and Scalability
+of Mixture-of-Experts Architecture"
+
+================================================================================
+FORMULA 1: INFERENCE TIME ESTIMATION
+================================================================================
+
+L_inference(B, A) = 0.081 - 0.013*B - 0.0085*A + 0.0105*A*B  (seconds)
+
+Parameters:
+  B = meta_top_k (number of experts activated per input)
+  A = total number of experts in the system
+
+Simplified form:
+  L_inference(B, A) = 0.081 + B*(0.0105*A - 0.013) - 0.0085*A
+
+Interpretation:
+  - Base overhead: ~81ms
+  - Router cost: ~8.5ms * A
+  - Per-activated-expert cost: ~(10.5*A - 13)ms per expert
+  - Linear scaling O(k) with activated experts
+
+Example calculations:
+  A=2, B=1:  0.081 - 0.013 - 0.017 + 0.021 = 0.072 seconds (72ms)
+  A=5, B=2:  0.081 - 0.026 - 0.0425 + 0.105 = 0.118 seconds (118ms)
+  A=4, B=3:  0.081 - 0.039 - 0.034 + 0.126 = 0.134 seconds (134ms)
+
+================================================================================
+FORMULA 2: TRAINING TIME ESTIMATION
+================================================================================
+
+T_total(D, I_1, I_2, ..., I_D) = SUM(0.00118 * I_i) + T_router(D)  (minutes)
+                                  i=1 to D
+
+Parameters:
+  D = number of experts
+  I_i = number of training images for expert i
+
+Router training time:
+  T_router(2) = 15 minutes                (initial 2-expert router)
+  T_router(D) = 30*D - 45 minutes         (for D > 2, incremental fine-tuning)
+
+Training rate coefficient (alpha = 0.00118 mins/image):
+  Derived from:
+    - GTSRB:    33 mins / 26,686 images = 0.001237 mins/image
+    - CIFAR-10: 54 mins / 50,000 images = 0.00108 mins/image
+    - MNIST:    72.5 mins / 60,000 images = 0.001208 mins/image
+    - Average: 0.00118 mins/image (~70 ms/image)
+
+Example calculations:
+
+  D=2 (GTSRB + CIFAR-10):
+    T_total = 0.00118 * (26,686 + 50,000) + 15
+            = 90.5 + 15
+            = 105.5 minutes
+    Actual: 99.5 minutes (6% error)
+
+  D=3 (add MNIST incrementally):
+    Incremental = 0.00118 * 60,000 + 30
+                = 70.8 + 30
+                = 100.8 minutes
+    Actual: 102.5 minutes (2% error)
+
+  D=4 (GTSRB + CIFAR-10 + MNIST + PTSD with 100K images):
+    T_total = 0.00118 * (26,686 + 50,000 + 60,000 + 100,000) + (30*4 - 45)
+            = 279.3 + 75
+            = 354.3 minutes (5.9 hours)
+
+================================================================================
+KEY INSIGHTS
+================================================================================
+
+Inference:
+  - Linear scaling O(k) with activated experts
+  - Router overhead: ~81ms base
+  - Scales efficiently with sparse activation (top-k)
+
+Training:
+  - Expert training: ~0.00118 mins/image (~70 ms/image)
+  - Router training: 15 mins for 2 experts, +30 mins per additional expert
+  - Compositional advantage: 16.7% faster for 3 datasets (202 vs 242.5 mins)
+  - Fine-tuning new expert: Only train new expert + router (no full retrain)
+
+Dataset sizes (training images):
+  - GTSRB:    26,686 images
+  - CIFAR-10: 50,000 images
+  - MNIST:    60,000 images
+  - PTSD:     ~100,000 images (estimated)
+
+================================================================================
