@@ -16,11 +16,17 @@
 define([
     'plugin/PluginConfig',
     'text!./metadata.json',
-    'plugin/PluginBase'
+    'plugin/PluginBase',
+    'fs',
+    'path',
+    'child_process'
 ], function (
     PluginConfig,
     pluginMetadata,
-    PluginBase) {
+    PluginBase,
+    fs,
+    path,
+    child_process) {
     'use strict';
 
     pluginMetadata = JSON.parse(pluginMetadata);
@@ -214,12 +220,48 @@ define([
 
                     self.logger.info('Report saved as artifacts');
                     self.createMessage(null, '');
-                    self.createMessage(null, '📊 View HTML Report: ' + htmlUrl);
-                    self.createMessage(null, 'Click "moe_extraction_report.html" in the artifacts list to view the formatted report');
+                    self.createMessage(null, '📊 HTML Report auto-opening in browser...');
+                    self.createMessage(null, 'Backup: Click "moe_extraction_report.html" in artifacts if browser doesn\'t open');
 
-                    // Send notification to open HTML report
+                    // Save HTML to temp file and auto-open in browser
+                    var tempDir = require('os').tmpdir();
+                    var tempHtmlPath = path.join(tempDir, 'moe_report_' + Date.now() + '.html');
+
+                    fs.writeFile(tempHtmlPath, htmlReport, function (err) {
+                        if (err) {
+                            self.logger.warn('Could not save temp HTML file:', err);
+                        } else {
+                            self.logger.info('Temp HTML saved to:', tempHtmlPath);
+
+                            // Open in browser based on platform
+                            var openCommand;
+                            if (process.platform === 'win32') {
+                                // Windows: Use cmd /c to ensure proper execution
+                                openCommand = 'cmd /c start "" "' + tempHtmlPath.replace(/"/g, '\\"') + '"';
+                            } else if (process.platform === 'darwin') {
+                                openCommand = 'open "' + tempHtmlPath + '"';
+                            } else {
+                                openCommand = 'xdg-open "' + tempHtmlPath + '"';
+                            }
+
+                            self.logger.info('Executing command:', openCommand);
+
+                            child_process.exec(openCommand, function (error, stdout, stderr) {
+                                if (error) {
+                                    self.logger.error('Could not auto-open browser:', error.message);
+                                    self.logger.error('stderr:', stderr);
+                                    self.createMessage(null, '⚠️ Could not auto-open browser. Please click the artifact manually.');
+                                } else {
+                                    self.logger.info('✅ Browser opened successfully!');
+                                    self.createMessage(null, '✅ Report opened in your browser!');
+                                }
+                            });
+                        }
+                    });
+
+                    // Send notification
                     self.sendNotification({
-                        message: 'MoE Data Extraction Complete! Click to view HTML report.',
+                        message: '✨ MoE Data Extraction Complete! Report opening in browser...',
                         severity: 'success'
                     });
 
