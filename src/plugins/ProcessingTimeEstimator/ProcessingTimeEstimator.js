@@ -2,18 +2,11 @@
 /*jshint node:true, browser:true*/
 
 /**
- * Processing Time Estimator Plugin
+ * Processing Time Estimator Plugin v2.1
  *
- * Estimates training processing time based on the number of training samples
- * using regression analysis. Works with Dataset nodes that have a
- * num_training_samples attribute.
- *
- * Based on regression models derived from empirical data:
- * - 26,000 images → 33 minutes
- * - 50,000 images → 54 minutes
- * - 60,000 images → 72 minutes
- *
- * @author Processing Time Research Team
+ * Supports two modes:
+ * 1. Single mode: Estimate time for a selected Dataset node
+ * 2. Multiple mode: Configure multiple datasets and get combined estimates
  */
 
 define([
@@ -28,190 +21,425 @@ define([
 
     pluginMetadata = JSON.parse(pluginMetadata);
 
-    /**
-     * Initializes a new instance of ProcessingTimeEstimator.
-     * @class
-     * @augments {PluginBase}
-     * @classdesc This class represents the plugin ProcessingTimeEstimator.
-     * @constructor
-     */
     var ProcessingTimeEstimator = function () {
         PluginBase.call(this);
         this.pluginMetadata = pluginMetadata;
     };
 
-    /**
-     * Metadata associated with the plugin.
-     * @type {object}
-     */
     ProcessingTimeEstimator.metadata = pluginMetadata;
-
     ProcessingTimeEstimator.prototype = Object.create(PluginBase.prototype);
     ProcessingTimeEstimator.prototype.constructor = ProcessingTimeEstimator;
 
     /**
      * Predict processing time based on the number of images
-     *
-     * @param {number} numImages - Number of images to process
-     * @param {string} modelType - Type of model ('linear' or 'polynomial')
-     * @returns {number} Predicted time in minutes
      */
     ProcessingTimeEstimator.prototype.predictProcessingTime = function(numImages, modelType) {
+        modelType = modelType || 'linear';
+
         if (modelType === 'linear') {
-            // Linear model: Time = 3.2620 + 0.001097 * Images
             var intercept = 3.2620;
             var coefficient = 0.001097;
             return intercept + coefficient * numImages;
-
         } else if (modelType === 'polynomial') {
-            // Polynomial model (degree 2)
             var c0 = 3.2619607843137337;
             var c1 = 0.0010971764705882374;
             var c2 = 4.411764705882354e-10;
             return c0 + c1 * numImages + c2 * Math.pow(numImages, 2);
-
         } else {
-            throw new Error('model_type must be "linear" or "polynomial"');
+            return 3.2620 + 0.001097 * numImages;
         }
-    };
-
-    /**
-     * Predict time for multiple models
-     *
-     * @param {Array<number>} imageCounts - Array of image counts
-     * @param {string} modelType - Type of regression model
-     * @param {string} processing - 'sequential' or 'parallel'
-     * @returns {object} Prediction results
-     */
-    ProcessingTimeEstimator.prototype.predictMultiModelTime = function(imageCounts, modelType, processing) {
-        var self = this;
-        var individualTimes = imageCounts.map(function(count) {
-            return self.predictProcessingTime(count, modelType);
-        });
-
-        var totalTime;
-        if (processing === 'sequential') {
-            totalTime = individualTimes.reduce(function(acc, t) {
-                return acc + t;
-            }, 0);
-        } else if (processing === 'parallel') {
-            totalTime = Math.max.apply(null, individualTimes);
-        } else {
-            throw new Error('processing must be "sequential" or "parallel"');
-        }
-
-        return {
-            total_time_minutes: totalTime,
-            total_time_hours: totalTime / 60,
-            individual_times: individualTimes,
-            num_models: imageCounts.length,
-            processing_mode: processing
-        };
     };
 
     /**
      * Format time for display
-     *
-     * @param {number} minutes - Time in minutes
-     * @returns {string} Formatted time string
      */
     ProcessingTimeEstimator.prototype.formatTime = function(minutes) {
         var hours = Math.floor(minutes / 60);
         var mins = Math.round(minutes % 60);
 
         if (hours > 0) {
-            return hours + 'h ' + mins + 'm (' + minutes.toFixed(1) + ' minutes)';
+            return hours + 'h ' + mins + 'm';
         } else {
-            return mins + ' minutes (' + minutes.toFixed(1) + ' minutes)';
+            return mins + ' minutes';
         }
     };
 
     /**
      * Main function for the plugin to execute.
-     * @param {function(string, plugin.PluginResult)} callback - the result callback
      */
     ProcessingTimeEstimator.prototype.main = function (callback) {
-        var self = this,
-            core = self.core,
-            activeNode = self.activeNode,
-            config = self.getCurrentConfig();
+        var self = this;
 
-        self.logger.info('Processing Time Estimator starting...');
+        try {
+            var config = self.getCurrentConfig();
+            var mode = config.mode || 'single';
 
-        // Get the active node (the selected node in WebGME)
+            self.logger.info('Processing Time Estimator v2.1 starting in ' + mode + ' mode...');
+
+            if (mode === 'single') {
+                self.runSingleMode(callback);
+            } else {
+                self.runMultipleMode(callback);
+            }
+
+        } catch (err) {
+            self.logger.error('Error in plugin: ' + err.toString());
+            self.logger.error('Stack: ' + err.stack);
+            self.result.setSuccess(false);
+            callback(err, self.result);
+        }
+    };
+
+    /**
+     * Single mode: Estimate time for selected dataset node
+     */
+    ProcessingTimeEstimator.prototype.runSingleMode = function(callback) {
+        var self = this;
+        var core = self.core;
+        var activeNode = self.activeNode;
+        var config = self.getCurrentConfig();
+
         var nodeName = core.getAttribute(activeNode, 'name');
-        var nodeType = core.getAttribute(core.getMetaType(activeNode), 'name');
-
-        self.logger.info('Selected node: ' + nodeName + ' (type: ' + nodeType + ')');
-
-        // Check if the node has num_training_samples attribute
         var numTrainingSamples = core.getAttribute(activeNode, 'num_training_samples');
 
         if (numTrainingSamples === undefined || numTrainingSamples === null) {
-            var errorMsg = 'Error: Selected node "' + nodeName + '" does not have a "num_training_samples" attribute.\n' +
-                          'Please select a Dataset node (e.g., CIFAR10_Dataset, GTSRB_Dataset, etc.) and run the plugin again.';
+            var errorMsg = 'Selected node does not have "num_training_samples" attribute. Please select a Dataset node or use "multiple" mode.';
             self.logger.error(errorMsg);
-            self.createMessage(activeNode, errorMsg, 'error');
             self.result.setSuccess(false);
             callback(errorMsg, self.result);
             return;
         }
 
-        // Get configuration
         var modelType = config.modelType || 'linear';
-        var processingMode = config.processingMode || 'sequential';
-
-        self.logger.info('Configuration: modelType=' + modelType + ', processingMode=' + processingMode);
-        self.logger.info('Number of training samples: ' + numTrainingSamples);
-
-        // Calculate processing time
         var timeMinutes = self.predictProcessingTime(numTrainingSamples, modelType);
         var timeHours = timeMinutes / 60;
 
-        // Create detailed result message
         var resultMsg = '\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '  PROCESSING TIME ESTIMATION\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '===============================================\n' +
+            '  PROCESSING TIME ESTIMATION (Single Dataset)\n' +
+            '===============================================\n' +
             '\n' +
             'Dataset: ' + nodeName + '\n' +
-            'Number of training samples: ' + numTrainingSamples.toLocaleString() + '\n' +
+            'Training samples: ' + numTrainingSamples.toLocaleString() + '\n' +
             'Regression model: ' + modelType + '\n' +
             '\n' +
-            'ESTIMATED PROCESSING TIME:\n' +
-            '  • ' + timeMinutes.toFixed(1) + ' minutes\n' +
-            '  • ' + timeHours.toFixed(2) + ' hours\n' +
-            '  • ' + (timeHours / 24).toFixed(3) + ' days\n' +
-            '\n';
-
-        // Add model comparison
-        var timeLinear = self.predictProcessingTime(numTrainingSamples, 'linear');
-        var timePoly = self.predictProcessingTime(numTrainingSamples, 'polynomial');
-
-        resultMsg += 'Model Comparison:\n' +
-            '  • Linear:     ' + timeLinear.toFixed(1) + ' min (' + (timeLinear / 60).toFixed(2) + ' hours)\n' +
-            '  • Polynomial: ' + timePoly.toFixed(1) + ' min (' + (timePoly / 60).toFixed(2) + ' hours)\n' +
-            '\n';
-
-        // Add reference data
-        resultMsg += 'Reference Data (empirical measurements):\n' +
-            '  • 26,000 images → 33 minutes\n' +
-            '  • 50,000 images → 54 minutes\n' +
-            '  • 60,000 images → 72 minutes\n' +
+            'ESTIMATED TIME:\n' +
+            '  * ' + timeMinutes.toFixed(1) + ' minutes\n' +
+            '  * ' + timeHours.toFixed(2) + ' hours\n' +
+            '  * ' + (timeHours / 24).toFixed(3) + ' days\n' +
             '\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+            'Reference Data:\n' +
+            '  * 26,000 images = 33 min\n' +
+            '  * 50,000 images = 54 min\n' +
+            '  * 60,000 images = 72 min\n' +
+            '\n' +
+            '===============================================\n';
+
+        self.logger.info(resultMsg);
+        self.saveResults(resultMsg, activeNode, timeMinutes, timeHours, callback);
+    };
+
+    /**
+     * Multiple mode: Estimate time for configured datasets
+     */
+    ProcessingTimeEstimator.prototype.runMultipleMode = function(callback) {
+        var self = this;
+        var config = self.getCurrentConfig();
+        var modelType = config.modelType || 'linear';
+        var processingMode = config.processingMode || 'sequential';
+
+        // Collect datasets from configuration
+        var datasets = [];
+        for (var i = 1; i <= 3; i++) {
+            var datasetType = config['dataset' + i + '_type'];
+            var samples = config['dataset' + i + '_samples'];
+
+            if (datasetType && datasetType !== 'None' && samples > 0) {
+                datasets.push({
+                    name: datasetType,
+                    samples: samples
+                });
+            }
+        }
+
+        if (datasets.length === 0) {
+            var errorMsg = 'No datasets configured. Please set at least one dataset with samples > 0.';
+            self.logger.error(errorMsg);
+            self.result.setSuccess(false);
+            callback(errorMsg, self.result);
+            return;
+        }
+
+        // Calculate times for each dataset
+        var datasetResults = [];
+        var totalSequential = 0;
+        var maxParallel = 0;
+
+        for (var j = 0; j < datasets.length; j++) {
+            var dataset = datasets[j];
+            var time = self.predictProcessingTime(dataset.samples, modelType);
+
+            datasetResults.push({
+                name: dataset.name,
+                samples: dataset.samples,
+                timeMinutes: time,
+                timeHours: time / 60
+            });
+
+            totalSequential += time;
+            if (time > maxParallel) {
+                maxParallel = time;
+            }
+        }
+
+        // Determine total time based on processing mode
+        var totalTime = processingMode === 'sequential' ? totalSequential : maxParallel;
+        var totalHours = totalTime / 60;
+
+        // Build comprehensive result message
+        var resultMsg = '\n' +
+            '================================================================\n' +
+            '  PROCESSING TIME ESTIMATION (Multiple Datasets)\n' +
+            '================================================================\n' +
+            '\n' +
+            'Configuration:\n' +
+            '  * Number of datasets: ' + datasets.length + '\n' +
+            '  * Regression model: ' + modelType + '\n' +
+            '  * Processing mode: ' + processingMode.toUpperCase() + '\n' +
+            '\n' +
+            '----------------------------------------------------------------\n' +
+            'INDIVIDUAL DATASET ESTIMATES:\n' +
+            '----------------------------------------------------------------\n';
+
+        for (var k = 0; k < datasetResults.length; k++) {
+            var result = datasetResults[k];
+            resultMsg += '\n' + (k + 1) + '. ' + result.name + '\n' +
+                '   Samples: ' + result.samples.toLocaleString() + '\n' +
+                '   Time: ' + result.timeMinutes.toFixed(1) + ' min (' +
+                result.timeHours.toFixed(2) + ' hours)\n';
+        }
+
+        resultMsg += '\n' +
+            '----------------------------------------------------------------\n' +
+            'TOTAL ESTIMATED TIME (' + processingMode.toUpperCase() + '):\n' +
+            '----------------------------------------------------------------\n' +
+            '\n';
+
+        if (processingMode === 'sequential') {
+            resultMsg += 'Sequential Processing (sum of all times):\n' +
+                '  * ' + totalTime.toFixed(1) + ' minutes\n' +
+                '  * ' + totalHours.toFixed(2) + ' hours\n' +
+                '  * ' + (totalHours / 24).toFixed(3) + ' days\n';
+        } else {
+            resultMsg += 'Parallel Processing (maximum time):\n' +
+                '  * ' + totalTime.toFixed(1) + ' minutes\n' +
+                '  * ' + totalHours.toFixed(2) + ' hours\n' +
+                '  * ' + (totalHours / 24).toFixed(3) + ' days\n' +
+                '\n' +
+                'Note: Parallel processing time is determined by the slowest dataset.\n';
+        }
+
+        resultMsg += '\n' +
+            '----------------------------------------------------------------\n' +
+            'COMPARISON (Sequential vs Parallel):\n' +
+            '----------------------------------------------------------------\n' +
+            '\n' +
+            'Sequential (1 GPU/machine - train one after another):\n' +
+            '  Total time: ' + totalSequential.toFixed(1) + ' min (' +
+            (totalSequential / 60).toFixed(2) + ' hours)\n' +
+            '\n' +
+            'Parallel (' + datasets.length + ' GPUs/machines - train all simultaneously):\n' +
+            '  Total time: ' + maxParallel.toFixed(1) + ' min (' +
+            (maxParallel / 60).toFixed(2) + ' hours)\n' +
+            '\n' +
+            'Time Saved with Parallel Processing:\n' +
+            '  ' + (totalSequential - maxParallel).toFixed(1) +
+            ' min (' + ((totalSequential - maxParallel) / 60).toFixed(2) + ' hours) faster\n' +
+            '  ' + ((1 - maxParallel / totalSequential) * 100).toFixed(1) + '% reduction in total time\n' +
+            '\n' +
+            'Reference Data (empirical measurements):\n' +
+            '  * 26,000 images = 33 min\n' +
+            '  * 50,000 images = 54 min\n' +
+            '  * 60,000 images = 72 min\n' +
+            '\n' +
+            '================================================================\n';
 
         self.logger.info(resultMsg);
 
-        // Create a message node if possible (optional - for visualization)
-        self.createMessage(activeNode,
-            'Processing Time Estimate: ' + self.formatTime(timeMinutes) + ' for ' +
-            numTrainingSamples.toLocaleString() + ' samples',
-            'info');
+        // Create summary for notification
+        var summary = {
+            mode: 'multiple',
+            datasets: datasets.length,
+            sequential: totalSequential,
+            parallel: maxParallel,
+            selected: processingMode
+        };
 
-        // Set success and return
-        self.result.setSuccess(true);
-        callback(null, self.result);
+        self.saveResults(resultMsg, self.activeNode, totalTime, totalHours, callback, summary);
+    };
+
+    /**
+     * Save results as artifact and optionally to node attributes
+     */
+    ProcessingTimeEstimator.prototype.saveResults = function(resultMsg, node, timeMinutes, timeHours, callback, summary) {
+        var self = this;
+        var core = self.core;
+
+        // Save results as a text artifact
+        var artifact = self.blobClient.createArtifact('ProcessingTimeEstimate');
+        var files = {};
+        files['processing_time_estimate.txt'] = resultMsg;
+
+        artifact.addFiles(files, function(err) {
+            if (err) {
+                self.logger.error('Error adding files to artifact: ' + err);
+                self.result.setSuccess(false);
+                callback(err, self.result);
+                return;
+            }
+
+            artifact.save(function(err, hash) {
+                if (err) {
+                    self.logger.error('Error saving artifact: ' + err);
+                    self.result.setSuccess(false);
+                    callback(err, self.result);
+                    return;
+                }
+
+                self.logger.info('Results saved to artifact. Download hash: ' + hash);
+                self.result.addArtifact(hash);
+
+                // Store hash for dialog
+                self._artifactHash = hash;
+
+                // Create and display summary notification
+                var notificationMsg = '';
+                if (summary) {
+                    // Multiple mode - show comparison
+                    notificationMsg = 'PROCESSING TIME ESTIMATE (' + summary.datasets + ' datasets)\n\n' +
+                        'Sequential (1 GPU): ' + summary.sequential.toFixed(1) + ' min (' +
+                        (summary.sequential / 60).toFixed(2) + ' hours)\n' +
+                        'Parallel (' + summary.datasets + ' GPUs): ' + summary.parallel.toFixed(1) + ' min (' +
+                        (summary.parallel / 60).toFixed(2) + ' hours)\n\n' +
+                        'Time saved: ' + (summary.sequential - summary.parallel).toFixed(1) + ' min (' +
+                        ((1 - summary.parallel / summary.sequential) * 100).toFixed(1) + '% reduction)\n\n' +
+                        'Download the artifact for complete details.';
+                } else {
+                    // Single mode - show single estimate
+                    notificationMsg = 'PROCESSING TIME ESTIMATE\n\n' +
+                        'Estimated time: ' + timeMinutes.toFixed(1) + ' min (' + timeHours.toFixed(2) + ' hours)\n\n' +
+                        'Download the artifact for complete details.';
+                }
+
+                // Log the notification message
+                self.logger.info('\n' + notificationMsg);
+
+                // Add notification message to plugin result for UI display
+                self.result.setSuccess(true);
+                self.createMessage(node, notificationMsg);
+
+                // Show custom dialog
+                self.showEstimateDialog(summary, timeMinutes, timeHours, node);
+
+                // Try to add attributes if node has num_training_samples (single mode)
+                var numSamples = core.getAttribute(node, 'num_training_samples');
+                if (numSamples !== undefined && numSamples !== null) {
+                    core.setAttribute(node, 'estimated_processing_time_minutes', timeMinutes);
+                    core.setAttribute(node, 'estimated_processing_time_hours', parseFloat(timeHours.toFixed(2)));
+
+                    var commitMsg = 'Added processing time estimate: ' + timeMinutes.toFixed(1) + ' minutes';
+                    self.save(commitMsg, function(err) {
+                        if (err) {
+                            self.logger.warn('Could not save attributes to node: ' + err);
+                        } else {
+                            self.logger.info('Processing time attributes added to node');
+                        }
+
+                        callback(null, self.result);
+                    });
+                } else {
+                    callback(null, self.result);
+                }
+            });
+        });
+    };
+
+    /**
+     * Show the processing time estimate dialog
+     */
+    ProcessingTimeEstimator.prototype.showEstimateDialog = function(summary, timeMinutes, timeHours, node) {
+        var self = this;
+
+        // Create dialog HTML directly
+        var dialogHtml = '<div class="processing-time-estimate-dialog modal fade" tabindex="-1" role="dialog">' +
+            '<div class="modal-dialog modal-sm">' +
+                '<div class="modal-content">' +
+                    '<div class="modal-header">' +
+                        '<button type="button" class="close" data-dismiss="modal">&times;</button>' +
+                        '<h4 class="modal-title">Processing Time Estimate</h4>' +
+                    '</div>' +
+                    '<div class="modal-body">' +
+                        '<div class="estimate-content"></div>' +
+                    '</div>' +
+                    '<div class="modal-footer">' +
+                        '<button class="btn btn-default btn-download">Download Report</button>' +
+                        '<button class="btn btn-primary btn-ok">OK</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+
+        var $dialog = $(dialogHtml);
+        var $content = $dialog.find('.estimate-content');
+
+        if (summary) {
+            // Multiple mode
+            var timeSaved = summary.sequential - summary.parallel;
+            var timeSavedPercent = (1 - summary.parallel / summary.sequential) * 100;
+
+            $content.html(
+                '<p><strong>Total datasets:</strong> ' + summary.datasets + '</p>' +
+                '<p><strong>Sequential (1 GPU):</strong> ' + summary.sequential.toFixed(1) + ' min (' +
+                    (summary.sequential / 60).toFixed(2) + ' hours)</p>' +
+                '<p><strong>Parallel (' + summary.datasets + ' GPUs):</strong> ' + summary.parallel.toFixed(1) + ' min (' +
+                    (summary.parallel / 60).toFixed(2) + ' hours)</p>' +
+                '<p><strong>Time saved:</strong> ' + timeSaved.toFixed(1) + ' min (' +
+                    timeSavedPercent.toFixed(1) + '% reduction)</p>'
+            );
+        } else {
+            // Single mode
+            var nodeName = self.core.getAttribute(node, 'name');
+            $content.html(
+                '<p><strong>Dataset:</strong> ' + nodeName + '</p>' +
+                '<p><strong>Estimated time:</strong> ' + timeMinutes.toFixed(1) + ' min (' +
+                    timeHours.toFixed(2) + ' hours)</p>'
+            );
+        }
+
+        // OK button handler
+        $dialog.find('.btn-ok').on('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            $dialog.modal('hide');
+        });
+
+        // Download Report button handler
+        $dialog.find('.btn-download').on('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (self._artifactHash) {
+                var downloadUrl = '/rest/blob/download/' + self._artifactHash;
+                window.location.href = downloadUrl;
+            }
+        });
+
+        // Cleanup on close
+        $dialog.on('hidden.bs.modal', function () {
+            $dialog.remove();
+        });
+
+        // Show the modal
+        $dialog.modal('show');
     };
 
     return ProcessingTimeEstimator;
