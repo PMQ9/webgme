@@ -1,0 +1,38 @@
+{
+  "id": "ProcessingTimeEstimator",
+  "name": "Processing Time Estimator",
+  "version": "1.0.0",
+  "description": "Estimates processing time for training based on the number of training samples using regression analysis. Select a Dataset node and run this plugin to get time predictions.",
+  "icon": {
+    "class": "glyphicon glyphicon-time",
+    "src": ""
+  },
+  "disableServerExecution": false,
+  "disableClientExecution": false,
+  "writeAccessRequired": false,
+  "configStructure": [
+    {
+      "name": "modelType",
+      "displayName": "Regression Model Type",
+      "description": "Type of regression model to use for prediction",
+      "value": "linear",
+      "valueType": "string",
+      "valueItems": [
+        "linear",
+        "polynomial"
+      ]
+    },
+    {
+      "name": "processingMode",
+      "displayName": "Processing Mode",
+      "description": "Sequential (sum times) or Parallel (max time) for multiple models",
+      "value": "sequential",
+      "valueType": "string",
+      "valueItems": [
+        "sequential",
+        "parallel"
+      ]
+    }
+  ],
+  "dependencies": []
+}
