@@ -1,0 +1,15 @@
+{
+  "id": "ExtractMoEData",
+  "name": "Extract MoE Data",
+  "version": "1.0.0",
+  "description": "Extracts key metrics from MoE models: (1) total Experts count, (2) Router meta_top_k values, (3) total Datasets count, (4) Dataset num_training_samples. Outputs a JSON report.",
+  "icon": {
+    "class": "glyphicon glyphicon-download-alt",
+    "src": ""
+  },
+  "disableServerExecution": false,
+  "disableClientExecution": false,
+  "writeAccessRequired": false,
+  "configStructure": [],
+  "dependencies": []
+}
