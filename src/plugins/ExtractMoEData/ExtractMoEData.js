@@ -160,6 +160,78 @@ define([
                 datasets: datasetInfo
             };
 
+            // ========================================
+            // CALCULATE INFERENCE TIME AND TRAINING TIME
+            // ========================================
+
+            // Inference Time Formula: L_inference(B, A) = 0.081 - 0.013*B - 0.0085*A + 0.0105*A*B (seconds)
+            // Parameters: B = meta_top_k, A = total_experts
+            var inferenceTime = null;
+            var inferenceTimeMs = null;
+
+            if (routerInfo.length > 0 && routerInfo[0].meta_top_k !== undefined) {
+                var B = routerInfo[0].meta_top_k; // meta_top_k
+                var A = expertsCount; // total experts
+
+                inferenceTime = 0.081 - 0.013*B - 0.0085*A + 0.0105*A*B; // in seconds
+                inferenceTimeMs = inferenceTime * 1000; // convert to milliseconds
+
+                report.inference_time_seconds = parseFloat(inferenceTime.toFixed(6));
+                report.inference_time_ms = parseFloat(inferenceTimeMs.toFixed(2));
+
+                self.logger.info('Calculated Inference Time: ' + inferenceTimeMs.toFixed(2) + 'ms (' + inferenceTime.toFixed(6) + 's)');
+            } else {
+                self.logger.warn('Cannot calculate inference time: missing router or meta_top_k');
+                report.inference_time_seconds = null;
+                report.inference_time_ms = null;
+            }
+
+            // Training Time Formula: T_total = SUM(0.00118 * I_i) + T_router(D) (minutes)
+            // Parameters: D = number of experts, I_i = training samples per dataset
+            // T_router(2) = 15 minutes, T_router(D) = 30*D - 45 (for D > 2)
+            var trainingTime = null;
+            var trainingTimeHours = null;
+
+            if (datasetInfo.length > 0 && expertsCount > 0) {
+                var D = expertsCount; // number of experts
+
+                // Calculate sum of training samples weighted by coefficient
+                var expertTrainingTime = 0;
+                datasetInfo.forEach(function(dataset) {
+                    if (dataset.num_training_samples) {
+                        expertTrainingTime += 0.00118 * dataset.num_training_samples;
+                    }
+                });
+
+                // Calculate router training time
+                var routerTrainingTime;
+                if (D === 2) {
+                    routerTrainingTime = 15; // 15 minutes for 2 experts
+                } else if (D > 2) {
+                    routerTrainingTime = 30 * D - 45; // incremental fine-tuning formula
+                } else {
+                    routerTrainingTime = 0; // single expert or no experts
+                }
+
+                trainingTime = expertTrainingTime + routerTrainingTime; // in minutes
+                trainingTimeHours = trainingTime / 60; // convert to hours
+
+                report.training_time_minutes = parseFloat(trainingTime.toFixed(2));
+                report.training_time_hours = parseFloat(trainingTimeHours.toFixed(2));
+                report.expert_training_time_minutes = parseFloat(expertTrainingTime.toFixed(2));
+                report.router_training_time_minutes = parseFloat(routerTrainingTime.toFixed(2));
+
+                self.logger.info('Calculated Training Time: ' + trainingTime.toFixed(2) + ' mins (' + trainingTimeHours.toFixed(2) + ' hours)');
+                self.logger.info('  - Expert training: ' + expertTrainingTime.toFixed(2) + ' mins');
+                self.logger.info('  - Router training: ' + routerTrainingTime.toFixed(2) + ' mins');
+            } else {
+                self.logger.warn('Cannot calculate training time: missing datasets or experts');
+                report.training_time_minutes = null;
+                report.training_time_hours = null;
+                report.expert_training_time_minutes = null;
+                report.router_training_time_minutes = null;
+            }
+
             // Log summary to backend
             self.logger.info('========== EXTRACTION RESULTS ==========');
             self.logger.info('1. Total Experts: ' + expertsCount);
@@ -191,6 +263,24 @@ define([
                 self.createMessage(null, '   - ' + dataset.name + ': ' + dataset.num_training_samples + ' training samples');
             });
             self.createMessage(null, '');
+
+            // Display time calculations
+            if (report.inference_time_ms !== null) {
+                self.createMessage(null, '5. Inference Time (estimated):');
+                self.createMessage(null, '   - ' + report.inference_time_ms.toFixed(2) + ' ms (' + report.inference_time_seconds.toFixed(6) + ' seconds)');
+                self.createMessage(null, '   - Formula: L = 0.081 - 0.013*B - 0.0085*A + 0.0105*A*B');
+                self.createMessage(null, '   - Parameters: A=' + expertsCount + ' experts, B=' + routerInfo[0].meta_top_k + ' (top-k)');
+                self.createMessage(null, '');
+            }
+
+            if (report.training_time_minutes !== null) {
+                self.createMessage(null, '6. Training Time (estimated):');
+                self.createMessage(null, '   - Total: ' + report.training_time_minutes.toFixed(2) + ' mins (' + report.training_time_hours.toFixed(2) + ' hours)');
+                self.createMessage(null, '   - Expert training: ' + report.expert_training_time_minutes.toFixed(2) + ' mins');
+                self.createMessage(null, '   - Router training: ' + report.router_training_time_minutes.toFixed(2) + ' mins');
+                self.createMessage(null, '');
+            }
+
             self.createMessage(null, '=================================================');
             self.createMessage(null, 'Full report saved as: moe_extraction_report.json');
 
@@ -392,20 +482,27 @@ define([
         html += '            <p class="timestamp">Generated: ' + new Date(report.extraction_timestamp).toLocaleString() + '</p>\n';
         html += '        </div>\n';
         html += '        <div class="content">\n';
-        html += '            <div class="summary-cards">\n';
-        html += '                <div class="card">\n';
-        html += '                    <div class="number">' + report.total_experts + '</div>\n';
-        html += '                    <div class="label">Total Experts</div>\n';
-        html += '                </div>\n';
-        html += '                <div class="card">\n';
-        html += '                    <div class="number">' + report.routers.length + '</div>\n';
-        html += '                    <div class="label">Routers</div>\n';
-        html += '                </div>\n';
-        html += '                <div class="card">\n';
-        html += '                    <div class="number">' + report.total_datasets + '</div>\n';
-        html += '                    <div class="label">Datasets</div>\n';
-        html += '                </div>\n';
-        html += '            </div>\n';
+
+        // Only show inference time and training time - centered
+        if (report.inference_time_ms !== null || report.training_time_hours !== null) {
+            html += '            <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 40px; flex-wrap: wrap;">\n';
+
+            if (report.inference_time_ms !== null) {
+                html += '                <div class="card" style="min-width: 250px;">\n';
+                html += '                    <div class="number">' + report.inference_time_ms.toFixed(1) + 'ms</div>\n';
+                html += '                    <div class="label">Inference Time</div>\n';
+                html += '                </div>\n';
+            }
+
+            if (report.training_time_hours !== null) {
+                html += '                <div class="card" style="min-width: 250px;">\n';
+                html += '                    <div class="number">' + report.training_time_hours.toFixed(1) + 'h</div>\n';
+                html += '                    <div class="label">Training Time</div>\n';
+                html += '                </div>\n';
+            }
+
+            html += '            </div>\n';
+        }
 
         // Router information
         if (report.routers.length > 0) {
@@ -454,6 +551,88 @@ define([
             });
             html += '                    </tbody>\n';
             html += '                </table>\n';
+            html += '            </div>\n';
+        }
+
+        // Time Analysis Section
+        if (report.inference_time_ms !== null || report.training_time_minutes !== null) {
+            html += '            <div class="section">\n';
+            html += '                <h2>⏱️ Time Analysis</h2>\n';
+            html += '                <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">\n';
+            html += '                    <p style="color: #856404; margin: 0; font-size: 14px;"><strong>⚙️ Hardware/Software Assumptions:</strong> Time estimates are based on the following environment:</p>\n';
+            html += '                    <ul style="color: #856404; margin: 10px 0 0 20px; font-size: 13px; line-height: 1.8;">\n';
+            html += '                        <li><strong>CPU:</strong> Intel Core i7-14700K (20 cores, 28 threads)</li>\n';
+            html += '                        <li><strong>GPU:</strong> NVIDIA GeForce RTX 4060 (8GB GDDR6)</li>\n';
+            html += '                        <li><strong>RAM:</strong> 64GB DDR5-5600</li>\n';
+            html += '                        <li><strong>Storage:</strong> 2TB NVMe SSD</li>\n';
+            html += '                        <li><strong>OS:</strong> Ubuntu 22.04.5 LTS</li>\n';
+            html += '                        <li><strong>Python:</strong> 3.10</li>\n';
+            html += '                        <li><strong>PyTorch:</strong> 2.1</li>\n';
+            html += '                    </ul>\n';
+            html += '                </div>\n';
+
+            // Inference Time Details
+            if (report.inference_time_ms !== null) {
+                html += '                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">\n';
+                html += '                    <h3 style="color: #667eea; margin-bottom: 15px;">Inference Time Estimation</h3>\n';
+                html += '                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">\n';
+                html += '                        <div>\n';
+                html += '                            <p style="color: #666; margin-bottom: 5px;"><strong>Formula:</strong></p>\n';
+                html += '                            <p style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">L = 0.081 - 0.013B - 0.0085A + 0.0105AB</p>\n';
+                html += '                        </div>\n';
+                html += '                        <div>\n';
+                html += '                            <p style="color: #666; margin-bottom: 5px;"><strong>Parameters:</strong></p>\n';
+                html += '                            <p style="background: white; padding: 10px; border-radius: 4px;">A = ' + report.total_experts + ' experts<br>B = ' + (report.routers[0] ? report.routers[0].meta_top_k : 'N/A') + ' (top-k)</p>\n';
+                html += '                        </div>\n';
+                html += '                    </div>\n';
+                html += '                    <div style="margin-top: 20px; text-align: center;">\n';
+                html += '                        <div style="font-size: 36px; font-weight: bold; color: #667eea;">' + report.inference_time_ms.toFixed(2) + ' ms</div>\n';
+                html += '                        <div style="color: #666; margin-top: 5px;">(' + report.inference_time_seconds.toFixed(6) + ' seconds)</div>\n';
+                html += '                    </div>\n';
+                html += '                </div>\n';
+            }
+
+            // Training Time Details
+            if (report.training_time_minutes !== null) {
+                html += '                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">\n';
+                html += '                    <h3 style="color: #667eea; margin-bottom: 15px;">Training Time Estimation</h3>\n';
+                html += '                    <div style="margin-bottom: 20px;">\n';
+                html += '                        <p style="color: #666; margin-bottom: 5px;"><strong>Formula:</strong></p>\n';
+                html += '                        <p style="font-family: monospace; background: white; padding: 10px; border-radius: 4px; font-size: 14px;">T = Σ(0.00118 × I<sub>i</sub>) + T<sub>router</sub>(D)</p>\n';
+                html += '                        <p style="color: #888; font-size: 12px; margin-top: 5px;">where T<sub>router</sub>(2) = 15 mins, T<sub>router</sub>(D>2) = 30D - 45 mins</p>\n';
+                html += '                    </div>\n';
+
+                // Training time breakdown table
+                html += '                    <table style="margin-bottom: 20px; background: white;">\n';
+                html += '                        <thead>\n';
+                html += '                            <tr>\n';
+                html += '                                <th>Component</th>\n';
+                html += '                                <th style="text-align: right;">Time (minutes)</th>\n';
+                html += '                            </tr>\n';
+                html += '                        </thead>\n';
+                html += '                        <tbody>\n';
+                html += '                            <tr>\n';
+                html += '                                <td>Expert Training</td>\n';
+                html += '                                <td style="text-align: right;">' + report.expert_training_time_minutes.toFixed(2) + '</td>\n';
+                html += '                            </tr>\n';
+                html += '                            <tr>\n';
+                html += '                                <td>Router Training (' + report.total_experts + ' experts)</td>\n';
+                html += '                                <td style="text-align: right;">' + report.router_training_time_minutes.toFixed(2) + '</td>\n';
+                html += '                            </tr>\n';
+                html += '                            <tr style="font-weight: bold; background: #f8f9fa;">\n';
+                html += '                                <td>Total Training Time</td>\n';
+                html += '                                <td style="text-align: right;">' + report.training_time_minutes.toFixed(2) + '</td>\n';
+                html += '                            </tr>\n';
+                html += '                        </tbody>\n';
+                html += '                    </table>\n';
+
+                html += '                    <div style="text-align: center;">\n';
+                html += '                        <div style="font-size: 36px; font-weight: bold; color: #667eea;">' + report.training_time_hours.toFixed(2) + ' hours</div>\n';
+                html += '                        <div style="color: #666; margin-top: 5px;">(' + report.training_time_minutes.toFixed(2) + ' minutes)</div>\n';
+                html += '                    </div>\n';
+                html += '                </div>\n';
+            }
+
             html += '            </div>\n';
         }
 
