@@ -1,0 +1,115 @@
+{
+  "id": "ProcessingTimeEstimator",
+  "name": "Training Time Estimator",
+  "version": "2.5.0",
+  "description": "Estimates training time for ML models. Single mode: select a dataset node. Multiple mode: choose datasets from dropdown menus and compare sequential vs parallel training times.",
+  "icon": {
+    "class": "glyphicon glyphicon-time",
+    "src": ""
+  },
+  "disableServerExecution": true,
+  "disableClientExecution": false,
+  "writeAccessRequired": true,
+  "configStructure": [
+    {
+      "name": "mode",
+      "displayName": "Estimation Mode",
+      "description": "Single: estimate for selected dataset node only. Multiple: configure multiple datasets manually",
+      "value": "single",
+      "valueType": "string",
+      "valueItems": [
+        "single",
+        "multiple"
+      ]
+    },
+    {
+      "name": "modelType",
+      "displayName": "Regression Model Type",
+      "description": "Type of regression model to use for prediction",
+      "value": "linear",
+      "valueType": "string",
+      "valueItems": [
+        "linear",
+        "polynomial"
+      ]
+    },
+    {
+      "name": "processingMode",
+      "displayName": "Training Mode (Multiple Datasets)",
+      "description": "Sequential: models train one after another (sum times). Parallel: models train simultaneously (max time)",
+      "value": "sequential",
+      "valueType": "string",
+      "valueItems": [
+        "sequential",
+        "parallel"
+      ]
+    },
+    {
+      "name": "dataset1_type",
+      "displayName": "Dataset 1 Type",
+      "description": "Select dataset type (None to skip)",
+      "value": "None",
+      "valueType": "string",
+      "valueItems": [
+        "None",
+        "MNIST_Dataset",
+        "CIFAR10_Dataset",
+        "GTSRB_Dataset"
+      ]
+    },
+    {
+      "name": "dataset1_samples",
+      "displayName": "Dataset 1 - Training Samples",
+      "description": "Number of training samples (use arrows to adjust)",
+      "value": 60000,
+      "valueType": "number",
+      "minValue": 0,
+      "maxValue": 1000000
+    },
+    {
+      "name": "dataset2_type",
+      "displayName": "Dataset 2 Type",
+      "description": "Select dataset type (None to skip)",
+      "value": "None",
+      "valueType": "string",
+      "valueItems": [
+        "None",
+        "MNIST_Dataset",
+        "CIFAR10_Dataset",
+        "GTSRB_Dataset"
+      ]
+    },
+    {
+      "name": "dataset2_samples",
+      "displayName": "Dataset 2 - Training Samples",
+      "description": "Number of training samples (use arrows to adjust)",
+      "value": 50000,
+      "valueType": "number",
+      "minValue": 0,
+      "maxValue": 1000000
+    },
+    {
+      "name": "dataset3_type",
+      "displayName": "Dataset 3 Type",
+      "description": "Select dataset type (None to skip)",
+      "value": "None",
+      "valueType": "string",
+      "valueItems": [
+        "None",
+        "MNIST_Dataset",
+        "CIFAR10_Dataset",
+        "GTSRB_Dataset"
+      ]
+    },
+    {
+      "name": "dataset3_samples",
+      "displayName": "Dataset 3 - Training Samples",
+      "description": "Number of training samples (use arrows to adjust)",
+      "value": 26000,
+      "valueType": "number",
+      "minValue": 0,
+      "maxValue": 1000000
+    }
+  ],
+  "dependencies": []
+}
