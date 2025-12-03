@@ -1,0 +1,36 @@
+{
+  "id": "InteractiveEstimatorUI",
+  "name": "InteractiveEstimatorUI",
+  "version": "1.0.0",
+  "description": "UI-only modal that reads precomputed estimates from node attributes and displays them.",
+  "icon": {
+    "class": "glyphicon glyphicon-modal-window",
+    "src": null
+  },
+  "disableServerExecution": true,
+  "disableBrowserSideExecution": false,
+  "configStructure": [
+    {
+      "name": "estimateAttribute",
+      "displayName": "Estimate Attribute",
+      "description": "Attribute name that holds the predicted value to display.",
+      "value": "inference_time_estimate",
+      "valueType": "string"
+    },
+    {
+      "name": "totalAttribute",
+      "displayName": "Total Attribute",
+      "description": "Attribute name for total experts (used for display only).",
+      "value": "total_experts_estimate",
+      "valueType": "string"
+    },
+    {
+      "name": "activeAttribute",
+      "displayName": "Active Attribute",
+      "description": "Attribute name for active experts (used for display only).",
+      "value": "meta_top_k",
+      "valueType": "string"
+    }
+  ],
+  "writeAccessRequired": false
+}

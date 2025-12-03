@@ -1,0 +1,49 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\begin{document}
+\title{Inference Time Regression Summary}
+\author{}
+\date{}
+\maketitle
+
+\section*{Model}
+\[
+T = b_0 + b_1 k + b_2 N + b_3 kN + b_4 k^2 + b_5 N^2
+\]
+
+Coefficients (fitted to the table in \texttt{inference\_time\_data.png}):
+\begin{align*}
+b_0 &= 0.05348109 \\
+b_1 &= 0.00532143 \\
+b_2 &= 0.00173004 \\
+b_3 &= 0.00803571 \\
+b_4 &= -0.00446429 \\
+b_5 &= -0.00092752 \\
+R^2 &\approx 0.9888
+\end{align*}
+
+\section*{Data and Error Check}
+Full table in \texttt{scenario\_results.md}; plot in \texttt{scenario\_plot.png}. Error bounds across measured points:
+\[
+\min(\text{error}) = -0.005914, \quad \max(\text{error}) = +0.004431.
+\]
+
+\section*{Examples}
+\begin{itemize}
+  \item $N=5, k=3$: predicted $0.135265$ vs actual $0.132$.
+  \item $N=5, k=5$: predicted $0.154836$ vs actual $0.156$.
+  \item $N=2, k=2$: predicted $0.078160$ vs actual $0.079$.
+\end{itemize}
+
+\section*{Artifacts}
+\begin{itemize}
+  \item \texttt{scenario\_results.csv}, \texttt{scenario\_results.md}: actual vs. predicted.
+  \item \texttt{scenario\_plot.png}: actual vs. predicted scatter with residual segments.
+  \item \texttt{inference\_time\_regression.png}: fit visualization by $k$ across $N$.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,36 @@
+{
+  "id": "InferenceTimeEstimator",
+  "name": "InferenceTimeEstimator",
+  "version": "1.0.0",
+  "description": "Predict inference time using fitted linear model and store it as an attribute.",
+  "icon": {
+    "class": "glyphicon glyphicon-time",
+    "src": null
+  },
+  "disableServerExecution": true,
+  "disableBrowserSideExecution": false,
+  "configStructure": [
+    {
+      "name": "totalExperts",
+      "displayName": "Total Experts",
+      "description": "Total number of experts (0 or empty = auto-count Experts under the selected node).",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "activeExperts",
+      "displayName": "Active Experts",
+      "description": "Number of experts activated for this inference.",
+      "value": 3,
+      "valueType": "number"
+    },
+    {
+      "name": "outputAttributeName",
+      "displayName": "Output Attribute",
+      "description": "Attribute name to store the predicted inference time on the selected node.",
+      "value": "inference_time_estimate",
+      "valueType": "string"
+    }
+  ],
+  "writeAccessRequired": true
+}
