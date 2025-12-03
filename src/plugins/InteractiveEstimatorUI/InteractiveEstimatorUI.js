@@ -4,10 +4,11 @@
 /**
  * InteractiveEstimatorUI
  *
- * Generic client-side estimator with an in-UI modal.
- * Model: T = b0 + b1*k + b2*N + b3*kN + b4*k^2 + b5*N^2
- * Coefficients, total, and active are provided via the plugin dialog.
- * If total is 0/empty, it auto-counts nodes named "Experts" under the selected node.
+ * UI-only modal: reads precomputed values from node attributes and displays them.
+ * No coefficients or compute are bundled. Defaults:
+ *   estimateAttribute = inference_time_estimate
+ *   totalAttribute    = total_experts_estimate
+ *   activeAttribute   = meta_top_k
  */
 
 define([
@@ -31,7 +32,7 @@ define([
     InteractiveEstimatorUI.prototype = Object.create(PluginBase.prototype);
     InteractiveEstimatorUI.prototype.constructor = InteractiveEstimatorUI;
 
-    function showModal(total, active, result) {
+    function showModal(total, active, estimate) {
         if (typeof window === 'undefined' || typeof window.$ === 'undefined') {
             return;
         }
@@ -52,7 +53,7 @@ define([
                 + '      <div class="modal-body">'
                 + '        <p><strong>Total (N):</strong> <span id="' + modalId + '-total"></span></p>'
                 + '        <p><strong>Active (k):</strong> <span id="' + modalId + '-active"></span></p>'
-                + '        <p><strong>Predicted:</strong> <span id="' + modalId + '-result"></span></p>'
+                + '        <p><strong>Estimated:</strong> <span id="' + modalId + '-result"></span></p>'
                 + '      </div>'
                 + '      <div class="modal-footer">'
                 + '        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>'
@@ -63,9 +64,13 @@ define([
             $('body').append(html);
             $existing = $('#' + modalId);
         }
-        $('#' + modalId + '-total').text(total);
-        $('#' + modalId + '-active').text(active);
-        $('#' + modalId + '-result').text(result.toFixed(6));
+        $('#' + modalId + '-total').text(total !== undefined ? total : '(n/a)');
+        $('#' + modalId + '-active').text(active !== undefined ? active : '(n/a)');
+        $('#' + modalId + '-result').text(
+            estimate !== undefined && estimate !== null && !Number.isNaN(estimate)
+                ? estimate.toFixed(6)
+                : '(n/a)'
+        );
         $existing.modal('show');
     }
 
@@ -74,91 +79,30 @@ define([
             core = self.core,
             node = self.activeNode || self.rootNode,
             config = self.getCurrentConfig(),
-            outAttr = config.outputAttributeName || 'estimate';
+            estimateAttr = config.estimateAttribute || 'inference_time_estimate',
+            totalAttr = config.totalAttribute || 'total_experts_estimate',
+            activeAttr = config.activeAttribute || 'meta_top_k',
+            estimate = core.getAttribute(node, estimateAttr),
+            total = core.getAttribute(node, totalAttr),
+            active = core.getAttribute(node, activeAttr);
 
-        function countExperts(n) {
-            return core.loadChildren(n)
-                .then(function (children) {
-                    var count = 0,
-                        promises = [];
-                    children.forEach(function (child) {
-                        var base = core.getBase(child),
-                            baseName = base ? core.getAttribute(base, 'name') : '',
-                            ownName = core.getAttribute(child, 'name');
-                        if (ownName === 'Experts' || baseName === 'Experts') {
-                            count += 1;
-                        }
-                        promises.push(countExperts(child).then(function (c) { count += c; }));
-                    });
-                    return Promise.all(promises).then(function () { return count; });
-                });
+        self.logger.info('Showing estimate from attributes',
+            estimateAttr + '=' + estimate,
+            totalAttr + '=' + total,
+            activeAttr + '=' + active);
+
+        self.createMessage(node, 'Estimate: ' + (estimate !== null ? estimate : '(n/a)') +
+            ' (total=' + (total !== null ? total : 'n/a') +
+            ', active=' + (active !== null ? active : 'n/a') + ')', 'info');
+
+        try {
+            showModal(total, active, typeof estimate === 'number' ? estimate : undefined);
+        } catch (e) {
+            self.logger.warn('Modal display failed: ' + e.toString());
         }
 
-        countExperts(node)
-            .then(function (expertCount) {
-                var totalInput = Number(config.totalExperts),
-                    total = Number.isFinite(totalInput) && totalInput >= 1 ? totalInput :
-                        (expertCount > 0 ? expertCount : 1),
-                    configActive = Number(config.activeExperts),
-                    defaultActive = 1,
-                    active = Number.isFinite(configActive) ? configActive : defaultActive,
-                    b0 = Number(config.coeff_b0) || 0,
-                    b1 = Number(config.coeff_b1) || 0,
-                    b2 = Number(config.coeff_b2) || 0,
-                    b3 = Number(config.coeff_b3) || 0,
-                    b4 = Number(config.coeff_b4) || 0,
-                    b5 = Number(config.coeff_b5) || 0,
-                    result;
-
-                if (active > total) {
-                    active = total;
-                }
-                if (!Number.isFinite(total) || total < 1) {
-                    throw new Error('totalExperts must be a positive number');
-                }
-                if (!Number.isFinite(active) || active < 1) {
-                    throw new Error('activeExperts must be at least 1');
-                }
-
-                result = b0 +
-                    b1 * active +
-                    b2 * total +
-                    b3 * active * total +
-                    b4 * active * active +
-                    b5 * total * total;
-
-                // Sync attributes
-                core.setAttribute(node, 'meta_top_k', active);
-                core.setAttribute(node, 'total_experts_estimate', total);
-                core.setAttribute(node, outAttr, result);
-
-                self.logger.info('Predicted value:', result.toFixed(6),
-                    '(total=' + total + ', active=' + active + ', attr=' + outAttr + ')');
-
-                self.createMessage(node, 'Predicted value: ' + result.toFixed(6) +
-                    ' (total=' + total + ', active=' + active + ')', 'info');
-
-                try {
-                    showModal(total, active, result);
-                } catch (e) {
-                    self.logger.warn('Modal display failed: ' + e.toString());
-                }
-
-                self.result.setSuccess(true);
-                self.result.addArtifact('estimate', {
-                    predicted: result,
-                    total_experts: total,
-                    active_experts: active,
-                    attribute: outAttr
-                });
-
-                self.save('Stored estimate on node', callback);
-            })
-            .catch(function (err) {
-                self.logger.error(err.toString());
-                self.result.setSuccess(false);
-                callback(err, self.result);
-            });
+        self.result.setSuccess(true);
+        callback(null, self.result);
     };
 
     return InteractiveEstimatorUI;
