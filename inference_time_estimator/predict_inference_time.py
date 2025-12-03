@@ -11,10 +11,15 @@ import argparse
 from typing import List, Tuple
 
 
+# Quadratic-in-features regression:
+# T = b0 + b1*k + b2*N + b3*kN + b4*k^2 + b5*N^2
 COEFFICIENTS = {
-    "intercept": 0.02791429,
-    "per_active": 0.01657143,
-    "per_total": 0.00951429,
+    "b0": 0.05348109,
+    "b1": 0.00532143,
+    "b2": 0.00173004,
+    "b3": 0.00803571,
+    "b4": -0.00446429,
+    "b5": -0.00092752,
 }
 
 
@@ -24,10 +29,20 @@ def predict_inference_time(total_experts: int, active_experts: int) -> float:
     if active_experts < 1 or active_experts > total_experts:
         raise ValueError("active_experts must be between 1 and total_experts")
 
-    b0 = COEFFICIENTS["intercept"]
-    b_active = COEFFICIENTS["per_active"]
-    b_total = COEFFICIENTS["per_total"]
-    return b0 + b_active * active_experts + b_total * total_experts
+    b0 = COEFFICIENTS["b0"]
+    b1 = COEFFICIENTS["b1"]
+    b2 = COEFFICIENTS["b2"]
+    b3 = COEFFICIENTS["b3"]
+    b4 = COEFFICIENTS["b4"]
+    b5 = COEFFICIENTS["b5"]
+    return (
+        b0
+        + b1 * active_experts
+        + b2 * total_experts
+        + b3 * active_experts * total_experts
+        + b4 * (active_experts ** 2)
+        + b5 * (total_experts ** 2)
+    )
 
 
 def build_table(max_total: int = 5) -> List[Tuple[int, int, float]]:

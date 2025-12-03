@@ -41,13 +41,24 @@ DATA: List[InferenceRecord] = [
 
 def fit_linear_model(records: Iterable[InferenceRecord]) -> Tuple[np.ndarray, float]:
     """
-    Fit y = b0 + b1 * active_experts + b2 * total_experts.
+    Fit quadratic-in-features linear model:
+    y = b0 + b1 * k + b2 * N + b3 * (k*N) + b4 * k^2 + b5 * N^2.
 
-    Returns coefficients [b0, b1, b2] and R^2.
+    Returns coefficients [b0, b1, b2, b3, b4, b5] and R^2.
     """
     data = list(records)
     X = np.array(
-        [[1.0, r.active_experts, r.total_experts] for r in data],
+        [
+            [
+                1.0,
+                r.active_experts,
+                r.total_experts,
+                r.active_experts * r.total_experts,
+                r.active_experts ** 2,
+                r.total_experts ** 2,
+            ]
+            for r in data
+        ],
         dtype=float,
     )
     y = np.array([r.time for r in data], dtype=float)
@@ -60,7 +71,7 @@ def fit_linear_model(records: Iterable[InferenceRecord]) -> Tuple[np.ndarray, fl
 
 
 def plot_fit(records: Iterable[InferenceRecord], coef: np.ndarray, output: Path) -> None:
-    intercept, b_active, b_total = coef
+    intercept, b_active, b_total, b_kn, b_k2, b_n2 = coef
     data = list(records)
     fig, ax = plt.subplots(figsize=(8, 5))
 
@@ -81,7 +92,14 @@ def plot_fit(records: Iterable[InferenceRecord], coef: np.ndarray, output: Path)
 
         # Predicted line for the same k across feasible totals.
         totals = np.arange(max(active, 1), 5 + 1)
-        preds = intercept + b_active * active + b_total * totals
+        preds = (
+            intercept
+            + b_active * active
+            + b_total * totals
+            + b_kn * active * totals
+            + b_k2 * (active ** 2)
+            + b_n2 * (totals ** 2)
+        )
         ax.plot(
             totals,
             preds,
@@ -92,9 +110,12 @@ def plot_fit(records: Iterable[InferenceRecord], coef: np.ndarray, output: Path)
         )
 
     equation = (
-        f"T = {intercept:.5f}"
-        f" + {b_active:.5f} * active_k"
-        f" + {b_total:.5f} * total_experts"
+        f"T = {intercept:.6f}"
+        f" + {b_active:.6f}*k"
+        f" + {b_total:.6f}*N"
+        f" + {b_kn:.6f}*kN"
+        f" + {b_k2:.6f}*k^2"
+        f" + {b_n2:.6f}*N^2"
     )
     ax.set_title("Inference Time Linear Fit")
     ax.set_xlabel("Total Experts")
@@ -118,12 +139,15 @@ def plot_fit(records: Iterable[InferenceRecord], coef: np.ndarray, output: Path)
 
 def main() -> None:
     coef, r2 = fit_linear_model(DATA)
-    intercept, b_active, b_total = coef
-    print("Coefficients (T = b0 + b1 * active_k + b2 * total_experts):")
-    print(f"  b0 (overhead)       = {intercept:.8f}")
-    print(f"  b1 (per active k)   = {b_active:.8f}")
-    print(f"  b2 (per total N)    = {b_total:.8f}")
-    print(f"R^2                   = {r2:.4f}")
+    intercept, b_active, b_total, b_kn, b_k2, b_n2 = coef
+    print("Coefficients for T = b0 + b1*k + b2*N + b3*kN + b4*k^2 + b5*N^2")
+    print(f"  b0  = {intercept:.8f}")
+    print(f"  b1  = {b_active:.8f}")
+    print(f"  b2  = {b_total:.8f}")
+    print(f"  b3  = {b_kn:.8f}")
+    print(f"  b4  = {b_k2:.8f}")
+    print(f"  b5  = {b_n2:.8f}")
+    print(f"R^2 = {r2:.4f}")
 
     output_path = Path("inference_time_regression.png")
     plot_fit(DATA, coef, output_path)

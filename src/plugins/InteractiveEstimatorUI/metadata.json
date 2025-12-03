@@ -1,0 +1,78 @@
+{
+  "id": "InteractiveEstimatorUI",
+  "name": "InteractiveEstimatorUI",
+  "version": "1.0.0",
+  "description": "Generic client-side estimator with in-UI modal; configure coefficients and inputs in the dialog.",
+  "icon": {
+    "class": "glyphicon glyphicon-modal-window",
+    "src": null
+  },
+  "disableServerExecution": true,
+  "disableBrowserSideExecution": false,
+  "configStructure": [
+    {
+      "name": "totalExperts",
+      "displayName": "Total Experts (0 = auto-count)",
+      "description": "Total number of experts; leave 0 or empty to auto-count Experts under the selected node.",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "activeExperts",
+      "displayName": "Active Experts (k)",
+      "description": "Number of experts activated for this estimate.",
+      "value": 1,
+      "valueType": "number"
+    },
+    {
+      "name": "outputAttributeName",
+      "displayName": "Output Attribute",
+      "description": "Attribute name to store the predicted value on the selected node.",
+      "value": "estimate",
+      "valueType": "string"
+    },
+    {
+      "name": "coeff_b0",
+      "displayName": "b0",
+      "description": "Coefficient b0 (intercept).",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "coeff_b1",
+      "displayName": "b1 (k)",
+      "description": "Coefficient for k.",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "coeff_b2",
+      "displayName": "b2 (N)",
+      "description": "Coefficient for N.",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "coeff_b3",
+      "displayName": "b3 (kN)",
+      "description": "Coefficient for kN.",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "coeff_b4",
+      "displayName": "b4 (k^2)",
+      "description": "Coefficient for k^2.",
+      "value": 0,
+      "valueType": "number"
+    },
+    {
+      "name": "coeff_b5",
+      "displayName": "b5 (N^2)",
+      "description": "Coefficient for N^2.",
+      "value": 0,
+      "valueType": "number"
+    }
+  ],
+  "writeAccessRequired": true
+}

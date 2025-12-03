@@ -1,6 +1,6 @@
 /**
- * Fit a linear regression for inference time:
- *   T = b0 + b1 * active_k + b2 * total_experts
+ * Fit a quadratic-feature regression for inference time:
+ *   T = b0 + b1 * k + b2 * N + b3 * kN + b4 * k^2 + b5 * N^2
  * Generate an HTML plot comparing actual points vs. predictions.
  */
 
@@ -25,16 +25,23 @@ const DATA = [
 ];
 
 function fitLinearModel(data) {
-  // X: [1, active, total]
-  const X = data.map((d) => [1, d.active, d.total]);
+  // X: [1, k, N, kN, k^2, N^2]
+  const X = data.map((d) => [
+    1,
+    d.active,
+    d.total,
+    d.active * d.total,
+    d.active * d.active,
+    d.total * d.total,
+  ]);
   const y = data.map((d) => d.time);
 
-  // Compute (X^T X)^{-1} X^T y via normal equations (3x3 inverse)
+  // Compute (X^T X)^{-1} X^T y via normal equations
   const Xt = transpose(X);
-  const XtX = multiply(Xt, X); // 3x3
-  const XtY = multiplyVector(Xt, y); // 3x1
-  const XtXInv = invert3x3(XtX);
-  const coef = multiplyVector(XtXInv, XtY); // [b0, b1, b2]
+  const XtX = multiply(Xt, X);
+  const XtY = multiplyVector(Xt, y);
+  const XtXInv = invertMatrix(XtX);
+  const coef = multiplyVector(XtXInv, XtY); // [b0..b5]
 
   const predictions = X.map((row) =>
     row.reduce((sum, val, idx) => sum + val * coef[idx], 0)
@@ -65,31 +72,33 @@ function multiplyVector(A, v) {
   return A.map((row) => row.reduce((sum, val, idx) => sum + val * v[idx], 0));
 }
 
-function invert3x3(m) {
-  const [
-    [a, b, c],
-    [d, e, f],
-    [g, h, i],
-  ] = m;
-  const A = e * i - f * h;
-  const B = -(d * i - f * g);
-  const C = d * h - e * g;
-  const D = -(b * i - c * h);
-  const E = a * i - c * g;
-  const F = -(a * h - b * g);
-  const G = b * f - c * e;
-  const H = -(a * f - c * d);
-  const I = a * e - b * d;
-  const det = a * A + b * B + c * C;
-  if (Math.abs(det) < 1e-12) {
-    throw new Error("Matrix not invertible");
+function invertMatrix(m) {
+  // Gauss-Jordan inversion for small matrices
+  const n = m.length;
+  const a = m.map((row) => row.slice());
+  const inv = Array.from({ length: n }, (_, i) =>
+    Array.from({ length: n }, (__2, j) => (i === j ? 1 : 0))
+  );
+  for (let i = 0; i < n; i++) {
+    let pivot = a[i][i];
+    if (Math.abs(pivot) < 1e-12) {
+      throw new Error("Matrix not invertible");
+    }
+    const invPivot = 1 / pivot;
+    for (let j = 0; j < n; j++) {
+      a[i][j] *= invPivot;
+      inv[i][j] *= invPivot;
+    }
+    for (let k = 0; k < n; k++) {
+      if (k === i) continue;
+      const factor = a[k][i];
+      for (let j = 0; j < n; j++) {
+        a[k][j] -= factor * a[i][j];
+        inv[k][j] -= factor * inv[i][j];
+      }
+    }
   }
-  const invDet = 1 / det;
-  return [
-    [A * invDet, D * invDet, G * invDet],
-    [B * invDet, E * invDet, H * invDet],
-    [C * invDet, F * invDet, I * invDet],
-  ];
+  return inv;
 }
 
 function computeR2(yTrue, yPred) {
@@ -100,8 +109,15 @@ function computeR2(yTrue, yPred) {
 }
 
 function predict(coef, total, active) {
-  const [b0, b1, b2] = coef;
-  return b0 + b1 * active + b2 * total;
+  const [b0, b1, b2, b3, b4, b5] = coef;
+  return (
+    b0 +
+    b1 * active +
+    b2 * total +
+    b3 * active * total +
+    b4 * active * active +
+    b5 * total * total
+  );
 }
 
 function uniqueKs(data) {
@@ -140,9 +156,11 @@ function buildHtmlPlot(coef) {
     });
   });
 
-  const equation = `T = ${coef[0].toFixed(5)} + ${coef[1].toFixed(
-    5
-  )} * active_k + ${coef[2].toFixed(5)} * total_experts`;
+  const equation = `T = ${coef[0].toFixed(6)} + ${coef[1].toFixed(
+    6
+  )}*k + ${coef[2].toFixed(6)}*N + ${coef[3].toFixed(
+    6
+  )}*kN + ${coef[4].toFixed(6)}*k^2 + ${coef[5].toFixed(6)}*N^2`;
 
   const layout = {
     title: "Inference Time Linear Fit (JS)",
@@ -185,11 +203,16 @@ function buildHtmlPlot(coef) {
 
 function main() {
   const { coef, r2 } = fitLinearModel(DATA);
-  console.log("Coefficients (T = b0 + b1 * active_k + b2 * total_experts):");
-  console.log(`  b0 (overhead)       = ${coef[0].toFixed(8)}`);
-  console.log(`  b1 (per active k)   = ${coef[1].toFixed(8)}`);
-  console.log(`  b2 (per total N)    = ${coef[2].toFixed(8)}`);
-  console.log(`R^2                   = ${r2.toFixed(4)}`);
+  console.log(
+    "Coefficients (T = b0 + b1*k + b2*N + b3*kN + b4*k^2 + b5*N^2):"
+  );
+  console.log(`  b0 = ${coef[0].toFixed(8)}`);
+  console.log(`  b1 = ${coef[1].toFixed(8)}`);
+  console.log(`  b2 = ${coef[2].toFixed(8)}`);
+  console.log(`  b3 = ${coef[3].toFixed(8)}`);
+  console.log(`  b4 = ${coef[4].toFixed(8)}`);
+  console.log(`  b5 = ${coef[5].toFixed(8)}`);
+  console.log(`R^2 = ${r2.toFixed(4)}`);
 
   const html = buildHtmlPlot(coef);
   const outPath = path.join(__dirname, "inference_time_regression.html");

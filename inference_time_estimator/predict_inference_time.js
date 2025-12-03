@@ -1,6 +1,6 @@
 /**
- * Predict inference time with the fitted linear model:
- *   T = 0.02791429 + 0.01657143 * active_k + 0.00951429 * total_experts
+ * Predict inference time with the fitted quadratic model:
+ *   T = b0 + b1*k + b2*N + b3*kN + b4*k^2 + b5*N^2
  *
  * Usage:
  *   node predict_inference_time.js --total 4 --active 3
@@ -8,9 +8,12 @@
  */
 
 const COEFFICIENTS = {
-  intercept: 0.02791429,
-  perActive: 0.01657143,
-  perTotal: 0.00951429,
+  b0: 0.05348109,
+  b1: 0.00532143,
+  b2: 0.00173004,
+  b3: 0.00803571,
+  b4: -0.00446429,
+  b5: -0.00092752,
 };
 
 function predict(total, active) {
@@ -20,8 +23,15 @@ function predict(total, active) {
   if (active < 1 || active > total) {
     throw new Error("active_experts must be between 1 and total_experts");
   }
-  const { intercept, perActive, perTotal } = COEFFICIENTS;
-  return intercept + perActive * active + perTotal * total;
+  const { b0, b1, b2, b3, b4, b5 } = COEFFICIENTS;
+  return (
+    b0 +
+    b1 * active +
+    b2 * total +
+    b3 * active * total +
+    b4 * active * active +
+    b5 * total * total
+  );
 }
 
 function parseArgs(argv) {
