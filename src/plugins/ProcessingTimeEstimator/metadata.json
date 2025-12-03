@@ -1,8 +1,8 @@
 {
   "id": "ProcessingTimeEstimator",
-  "name": "Processing Time Estimator",
-  "version": "2.4.0",
-  "description": "Estimates processing time for training. Single mode: select a dataset node. Multiple mode: choose datasets from dropdown menus and compare sequential vs parallel processing times.",
+  "name": "Training Time Estimator",
+  "version": "2.5.0",
+  "description": "Estimates training time for ML models. Single mode: select a dataset node. Multiple mode: choose datasets from dropdown menus and compare sequential vs parallel training times.",
   "icon": {
     "class": "glyphicon glyphicon-time",
     "src": ""
@@ -35,7 +35,7 @@
     },
     {
       "name": "processingMode",
-      "displayName": "Processing Mode (Multiple Datasets)",
+      "displayName": "Training Mode (Multiple Datasets)",
       "description": "Sequential: models train one after another (sum times). Parallel: models train simultaneously (max time)",
       "value": "sequential",
       "valueType": "string",

@@ -116,7 +116,7 @@ define([
 
         var resultMsg = '\n' +
             '===============================================\n' +
-            '  PROCESSING TIME ESTIMATION (Single Dataset)\n' +
+            '  ESTIMATED TRAINING TIME (Single Dataset)\n' +
             '===============================================\n' +
             '\n' +
             'Dataset: ' + nodeName + '\n' +
@@ -199,7 +199,7 @@ define([
         // Build comprehensive result message
         var resultMsg = '\n' +
             '================================================================\n' +
-            '  PROCESSING TIME ESTIMATION (Multiple Datasets)\n' +
+            '  ESTIMATED TRAINING TIME (Multiple Datasets)\n' +
             '================================================================\n' +
             '\n' +
             'Configuration:\n' +
@@ -286,9 +286,9 @@ define([
         var core = self.core;
 
         // Save results as a text artifact
-        var artifact = self.blobClient.createArtifact('ProcessingTimeEstimate');
+        var artifact = self.blobClient.createArtifact('TrainingTimeEstimate');
         var files = {};
-        files['processing_time_estimate.txt'] = resultMsg;
+        files['training_time_estimate.txt'] = resultMsg;
 
         artifact.addFiles(files, function(err) {
             if (err) {
@@ -316,7 +316,7 @@ define([
                 var notificationMsg = '';
                 if (summary) {
                     // Multiple mode - show comparison
-                    notificationMsg = 'PROCESSING TIME ESTIMATE (' + summary.datasets + ' datasets)\n\n' +
+                    notificationMsg = 'ESTIMATED TRAINING TIME (' + summary.datasets + ' datasets)\n\n' +
                         'Sequential (1 GPU): ' + summary.sequential.toFixed(1) + ' min (' +
                         (summary.sequential / 60).toFixed(2) + ' hours)\n' +
                         'Parallel (' + summary.datasets + ' GPUs): ' + summary.parallel.toFixed(1) + ' min (' +
@@ -326,7 +326,7 @@ define([
                         'Download the artifact for complete details.';
                 } else {
                     // Single mode - show single estimate
-                    notificationMsg = 'PROCESSING TIME ESTIMATE\n\n' +
+                    notificationMsg = 'ESTIMATED TRAINING TIME\n\n' +
                         'Estimated time: ' + timeMinutes.toFixed(1) + ' min (' + timeHours.toFixed(2) + ' hours)\n\n' +
                         'Download the artifact for complete details.';
                 }
@@ -376,7 +376,7 @@ define([
                 '<div class="modal-content">' +
                     '<div class="modal-header">' +
                         '<button type="button" class="close" data-dismiss="modal">&times;</button>' +
-                        '<h4 class="modal-title">Processing Time Estimate</h4>' +
+                        '<h4 class="modal-title">Estimated Training Time</h4>' +
                     '</div>' +
                     '<div class="modal-body">' +
                         '<div class="estimate-content"></div>' +
